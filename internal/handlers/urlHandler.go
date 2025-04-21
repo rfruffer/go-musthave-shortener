@@ -29,8 +29,9 @@ func (us *UrlHandler) ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		shortURL := "http://localhost:8080/" + id
-		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusCreated)
+
 		w.Write([]byte(shortURL))
 	} else if r.Method == http.MethodGet {
 		id := r.URL.Path[len("/"):]
@@ -44,11 +45,14 @@ func (us *UrlHandler) ShortUrlHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Cant find id in store", http.StatusBadRequest)
 			return
 		}
+		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusTemporaryRedirect)
+
 		w.Write([]byte("Location: " + originalURL))
-		//http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
+
 		return
 	} else {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "Unsupport method", http.StatusUnauthorized)
+		//w.WriteHeader(http.StatusUnauthorized)
 	}
 }
