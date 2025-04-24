@@ -11,14 +11,14 @@ var (
 	shortSize = 8
 )
 
-type UrlService struct {
+type URLService struct {
 }
 
-func NewUrlService() *UrlService {
-	return &UrlService{}
+func NewURLService() *URLService {
+	return &URLService{}
 }
 
-func (s *UrlService) GenerateShortUrl(originalURL string) (string, error) {
+func (s *URLService) GenerateShortURL(originalURL string) (string, error) {
 	b := make([]byte, shortSize)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -29,7 +29,7 @@ func (s *UrlService) GenerateShortUrl(originalURL string) (string, error) {
 	return id, nil
 }
 
-func (s *UrlService) RedirectUrl(id string) (string, error) {
+func (s *URLService) RedirectURL(id string) (string, error) {
 	originalURL, ok := store[id]
 
 	if !ok {

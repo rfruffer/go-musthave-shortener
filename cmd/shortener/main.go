@@ -3,18 +3,29 @@ package main
 import (
 	"net/http"
 
+	"github.com/go-chi/chi"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 )
 
 func main() {
-	urlService := services.NewUrlService()
-	urlHandler := handlers.NewUrlHandler(urlService)
+	urlService := services.NewURLService()
+	urlHandler := handlers.NewURLHandler(urlService)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/`, urlHandler.ShortUrlHandler)
+	r := chi.NewRouter()
 
-	err := http.ListenAndServe(`:8080`, mux)
+	r.Get("/{id}", urlHandler.GetShortURLHandler)
+	r.Post("/", urlHandler.CreateShortURLHandler)
+
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Invalid request", http.StatusUnauthorized)
+	})
+
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Invalid request", http.StatusUnauthorized)
+	})
+
+	err := http.ListenAndServe(`:8080`, r)
 	if err != nil {
 		panic(err)
 	}

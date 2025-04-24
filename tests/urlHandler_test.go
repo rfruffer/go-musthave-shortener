@@ -1,12 +1,13 @@
 package tests
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi"
+	"github.com/go-resty/resty/v2"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 	"github.com/stretchr/testify/assert"
@@ -20,9 +21,24 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 		response    string
 	}
 
-	var savedId string
-	service := services.NewUrlService()
-	handler := handlers.NewUrlHandler(service)
+	var savedID string
+	service := services.NewURLService()
+	handler := handlers.NewURLHandler(service)
+
+	r := chi.NewRouter()
+	r.Get("/{id}", handler.GetShortURLHandler)
+	r.Post("/", handler.CreateShortURLHandler)
+
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Invalid request", http.StatusUnauthorized)
+	})
+
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Invalid request", http.StatusUnauthorized)
+	})
+
+	server := httptest.NewServer(r)
+	defer server.Close()
 
 	tests := []struct {
 		name      string
@@ -31,8 +47,8 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 		body      string
 		request   string
 		want      want
-		useSaveId bool
-		saveId    bool
+		useSaveID bool
+		saveID    bool
 	}{
 		{
 			name:   "POST CORRECT",
@@ -44,7 +60,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 				statusCode:  http.StatusCreated,
 				response:    "http://localhost:8080/",
 			},
-			saveId: true,
+			saveID: true,
 		},
 		{
 			name:   "GET CORRECT",
@@ -56,7 +72,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 				statusCode:  http.StatusTemporaryRedirect,
 				response:    "Location: https://practicum.yandex.ru/",
 			},
-			useSaveId: true,
+			useSaveID: true,
 		},
 		{
 			name:   "NEGATIVE POST",
@@ -72,14 +88,14 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 		{
 			name:   "NEGATIVE GET",
 			method: http.MethodGet,
-			path:   "/",
+			path:   "/fakeId",
 			body:   "",
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				response:    "Missing ID\n",
+				response:    "Cant find id in store\n",
 			},
-			useSaveId: false,
+			useSaveID: false,
 		},
 		{
 			name:   "INCORRECT METHOD",
@@ -89,36 +105,34 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusUnauthorized,
-				response:    "Unsupport method\n",
+				response:    "Invalid request\n",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := tt.path
-			if tt.useSaveId {
-				path = "/" + savedId
+			if tt.useSaveID {
+				path = "/" + savedID
 			}
+			client := resty.New()
 
-			r := httptest.NewRequest(tt.method, path, strings.NewReader(tt.body))
-			w := httptest.NewRecorder()
+			resp, err := client.R().
+				SetBody(tt.body).
+				SetHeader("Content-Type", "text/plain").
+				Execute(tt.method, server.URL+path)
 
-			http.HandlerFunc(handler.ShortUrlHandler).ServeHTTP(w, r)
-
-			result := w.Result()
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
-			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
-
-			bodyResult, err := ioutil.ReadAll(result.Body)
 			require.NoError(t, err)
-			err = result.Body.Close()
-			require.NoError(t, err)
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
+			assert.Equal(t, tt.want.contentType, resp.Header().Get("Content-Type"))
 
-			if tt.saveId {
-				savedId = strings.TrimPrefix(string(bodyResult), "http://localhost:8080/")
-				assert.Equal(t, tt.want.response+savedId, string(bodyResult))
+			body := string(resp.Body())
+
+			if tt.saveID {
+				savedID = strings.TrimPrefix(body, "http://localhost:8080/")
+				assert.Equal(t, tt.want.response+savedID, body)
 			} else {
-				assert.Equal(t, tt.want.response, string(bodyResult))
+				assert.Equal(t, tt.want.response, body)
 			}
 
 		})
