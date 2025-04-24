@@ -3,6 +3,7 @@ package tests
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -40,6 +41,8 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 	server := httptest.NewServer(r)
 	defer server.Close()
 
+	os.Setenv("BASE_URL", server.URL)
+
 	tests := []struct {
 		name      string
 		method    string
@@ -68,9 +71,9 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			path:   "/",
 			body:   "",
 			want: want{
-				contentType: "text/plain",
+				contentType: "text/html; charset=utf-8",
 				statusCode:  http.StatusTemporaryRedirect,
-				response:    "Location: https://practicum.yandex.ru/",
+				response:    "https://practicum.yandex.ru/",
 			},
 			useSaveID: true,
 		},
@@ -115,12 +118,34 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			if tt.useSaveID {
 				path = "/" + savedID
 			}
-			client := resty.New()
 
-			resp, err := client.R().
-				SetBody(tt.body).
-				SetHeader("Content-Type", "text/plain").
-				Execute(tt.method, server.URL+path)
+			client := resty.NewWithClient(&http.Client{
+				CheckRedirect: func(req *http.Request, via []*http.Request) error {
+					return http.ErrUseLastResponse // <- ключевая строка
+				},
+			})
+
+			req := client.R().
+				SetHeader("Content-Type", "text/plain")
+
+			if tt.method == http.MethodPost {
+				req.SetBody(tt.body)
+			}
+
+			var resp *resty.Response
+			var err error
+
+			request := client.R().
+				SetHeader("Content-Type", "text/plain")
+
+			if tt.method == http.MethodPost {
+				request.SetBody(tt.body)
+				resp, err = request.Post(server.URL + path)
+			} else if tt.method == http.MethodGet {
+				resp, err = request.Get(server.URL + path)
+			} else {
+				resp, err = request.Execute(tt.method, server.URL+path)
+			}
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
@@ -129,12 +154,13 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			body := string(resp.Body())
 
 			if tt.saveID {
-				savedID = strings.TrimPrefix(body, "http://localhost:8080/")
-				assert.Equal(t, tt.want.response+savedID, body)
+				savedID = strings.TrimPrefix(body, server.URL+"/")
+				assert.Equal(t, server.URL+"/"+savedID, body)
+			} else if tt.useSaveID {
+				assert.Equal(t, tt.want.response, resp.Header().Get("Location"))
 			} else {
 				assert.Equal(t, tt.want.response, body)
 			}
-
 		})
 	}
 }

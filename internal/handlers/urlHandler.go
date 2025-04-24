@@ -3,6 +3,7 @@ package handlers
 import (
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
@@ -28,7 +29,12 @@ func (us *URLHandler) CreateShortURLHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Failed to create a short url", http.StatusBadRequest)
 		return
 	}
-	shortURL := "http://localhost:8080/" + id
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	}
+	//shortURL := "http://localhost:8080/" + id
+	shortURL := baseURL + "/" + id
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 
@@ -42,13 +48,14 @@ func (us *URLHandler) GetShortURLHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Missing ID", http.StatusBadRequest)
 		return
 	}
+
 	originalURL, err := us.service.RedirectURL(id)
 	if err != nil {
 		http.Error(w, "Cant find id in store", http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusTemporaryRedirect)
-
-	w.Write([]byte("Location: " + originalURL))
+	// w.Header().Set("Content-Type", "text/plain")
+	// w.WriteHeader(http.StatusTemporaryRedirect)
+	// w.Write([]byte("Location: " + originalURL))
+	http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
 }
