@@ -53,6 +53,6 @@ func (us *URLHandler) GetShortURLHandler(w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
 }
 
-func (h *URLHandler) SetResultHost(host string) {
-	h.baseURL = host
+func (us *URLHandler) SetResultHost(host string) {
+	us.baseURL = host
 }
