@@ -1,9 +1,9 @@
 package services
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 )
 
 var (
@@ -33,7 +33,7 @@ func (s *URLService) RedirectURL(id string) (string, error) {
 	originalURL, ok := store[id]
 
 	if !ok {
-		return "", fmt.Errorf("Cant find id in store")
+		return "", fmt.Errorf("cant find id in store")
 	}
 	return originalURL, nil
 }

@@ -3,7 +3,6 @@ package tests
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -24,24 +23,24 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 
 	var savedID string
 	service := services.NewURLService()
-	handler := handlers.NewURLHandler(service)
+	handler := handlers.NewURLHandler(service, "")
 
 	r := chi.NewRouter()
 	r.Get("/{id}", handler.GetShortURLHandler)
 	r.Post("/", handler.CreateShortURLHandler)
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "Invalid request", http.StatusUnauthorized)
+		http.Error(w, "invalid request", http.StatusUnauthorized)
 	})
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "Invalid request", http.StatusUnauthorized)
+		http.Error(w, "invalid request", http.StatusUnauthorized)
 	})
 
 	server := httptest.NewServer(r)
 	defer server.Close()
 
-	os.Setenv("BASE_URL", server.URL)
+	handler.SetResultHost(server.URL)
 
 	tests := []struct {
 		name      string
@@ -85,7 +84,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				response:    "Empty or invalid body\n",
+				response:    "empty or invalid body\n",
 			},
 		},
 		{
@@ -96,7 +95,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				response:    "Cant find id in store\n",
+				response:    "cant find id in store\n",
 			},
 			useSaveID: false,
 		},
@@ -108,7 +107,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusUnauthorized,
-				response:    "Invalid request\n",
+				response:    "invalid request\n",
 			},
 		},
 	}
