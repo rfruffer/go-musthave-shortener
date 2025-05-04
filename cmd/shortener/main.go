@@ -6,16 +6,30 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/rfruffer/go-musthave-shortener/config"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
+	"github.com/rfruffer/go-musthave-shortener/internal/middlewares"
+	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
+	"go.uber.org/zap"
 )
 
 func main() {
 	cfg := config.ParseFlags()
 
-	urlService := services.NewURLService()
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+	sugar := logger.Sugar()
+
+	repo := repository.NewInMemoryStore()
+	urlService := services.NewURLService(repo)
 	urlHandler := handlers.NewURLHandler(urlService, cfg.ResultHost)
 
 	r := chi.NewRouter()
+
+	middlewares.InitLogger(sugar)
+	r.Use(middlewares.LoggingMiddleware)
 
 	r.Get("/{id}", urlHandler.GetShortURLHandler)
 	r.Post("/", urlHandler.CreateShortURLHandler)
@@ -28,7 +42,7 @@ func main() {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 	})
 
-	err := http.ListenAndServe(cfg.StartHost, r)
+	err = http.ListenAndServe(cfg.StartHost, r)
 	if err != nil {
 		panic(err)
 	}

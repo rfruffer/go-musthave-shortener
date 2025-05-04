@@ -26,7 +26,7 @@ func (us *URLHandler) CreateShortURLHandler(w http.ResponseWriter, r *http.Reque
 	originalURL := string(body)
 	id, err := us.service.GenerateShortURL(originalURL)
 	if err != nil {
-		http.Error(w, "failed to create a short url", http.StatusBadRequest)
+		http.Error(w, "failed to create a short url", http.StatusNotFound)
 		return
 	}
 
