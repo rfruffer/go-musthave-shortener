@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
+	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,8 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 	}
 
 	var savedID string
-	service := services.NewURLService()
+	repo := repository.NewInMemoryStore()
+	service := services.NewURLService(repo)
 	handler := handlers.NewURLHandler(service, "")
 
 	r := chi.NewRouter()
@@ -137,12 +139,13 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			request := client.R().
 				SetHeader("Content-Type", "text/plain")
 
-			if tt.method == http.MethodPost {
+			switch tt.method {
+			case http.MethodPost:
 				request.SetBody(tt.body)
 				resp, err = request.Post(server.URL + path)
-			} else if tt.method == http.MethodGet {
+			case http.MethodGet:
 				resp, err = request.Get(server.URL + path)
-			} else {
+			default:
 				resp, err = request.Execute(tt.method, server.URL+path)
 			}
 
