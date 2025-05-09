@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 )
 
@@ -15,6 +17,28 @@ type URLHandler struct {
 
 func NewURLHandler(service *services.URLService, baseURL string) *URLHandler {
 	return &URLHandler{service: service, baseURL: baseURL}
+}
+
+func (us *URLHandler) CreateShortJsonURLHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.ShortenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "iempty or invalid body", http.StatusBadRequest)
+		return
+	}
+	id, err := us.service.GenerateShortURL(req.URL)
+	if err != nil {
+		http.Error(w, "failed to create a short url", http.StatusNotFound)
+		return
+	}
+
+	resp := models.ShortenResponse{
+		Result: us.baseURL + "/" + id,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (us *URLHandler) CreateShortURLHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
+	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 	"github.com/stretchr/testify/assert"
@@ -30,6 +32,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 	r := chi.NewRouter()
 	r.Get("/{id}", handler.GetShortURLHandler)
 	r.Post("/", handler.CreateShortURLHandler)
+	r.Post("/api/shorten", handler.CreateShortJsonURLHandler)
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusUnauthorized)
@@ -53,6 +56,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 		want      want
 		useSaveID bool
 		saveID    bool
+		isJSON    bool
 	}{
 		{
 			name:   "POST CORRECT",
@@ -65,6 +69,19 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 				response:    "http://localhost:8080/",
 			},
 			saveID: true,
+		},
+		{
+			name:   "POST JSON CORRECT",
+			method: http.MethodPost,
+			path:   "/api/shorten",
+			body:   `{"url": "https://practicum.yandex.ru"}`,
+			want: want{
+				contentType: "application/json",
+				statusCode:  http.StatusCreated,
+				response:    "",
+			},
+			saveID: true,
+			isJSON: true,
 		},
 		{
 			name:   "GET CORRECT",
@@ -126,8 +143,13 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 				},
 			})
 
-			req := client.R().
-				SetHeader("Content-Type", "text/plain")
+			req := client.R()
+
+			if tt.isJSON {
+				req.SetHeader("Content-Type", "application/json")
+			} else {
+				req.SetHeader("Content-Type", "text/plain")
+			}
 
 			if tt.method == http.MethodPost {
 				req.SetBody(tt.body)
@@ -156,8 +178,15 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			body := string(resp.Body())
 
 			if tt.saveID {
-				savedID = strings.TrimPrefix(body, server.URL+"/")
-				assert.Equal(t, server.URL+"/"+savedID, body)
+				if tt.isJSON == true {
+					var jsonResp models.ShortenResponse
+					err := json.Unmarshal(resp.Body(), &jsonResp)
+					require.NoError(t, err)
+					require.True(t, strings.HasPrefix(jsonResp.Result, server.URL+"/"))
+				} else {
+					savedID = strings.TrimPrefix(body, server.URL+"/")
+					assert.Equal(t, server.URL+"/"+savedID, body)
+				}
 			} else if tt.useSaveID {
 				assert.Equal(t, tt.want.response, resp.Header().Get("Location"))
 			} else {

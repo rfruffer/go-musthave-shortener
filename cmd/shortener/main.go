@@ -23,16 +23,17 @@ func main() {
 	sugar := logger.Sugar()
 
 	repo := repository.NewInMemoryStore()
-	urlService := services.NewURLService(repo)
-	urlHandler := handlers.NewURLHandler(urlService, cfg.ResultHost)
+	service := services.NewURLService(repo)
+	handler := handlers.NewURLHandler(service, cfg.ResultHost)
 
 	r := chi.NewRouter()
 
 	middlewares.InitLogger(sugar)
 	r.Use(middlewares.LoggingMiddleware)
 
-	r.Get("/{id}", urlHandler.GetShortURLHandler)
-	r.Post("/", urlHandler.CreateShortURLHandler)
+	r.Get("/{id}", handler.GetShortURLHandler)
+	r.Post("/", handler.CreateShortURLHandler)
+	r.Post("/api/shorten", handler.CreateShortJsonURLHandler)
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
