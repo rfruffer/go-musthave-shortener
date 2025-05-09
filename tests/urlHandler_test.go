@@ -32,7 +32,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 	r := chi.NewRouter()
 	r.Get("/{id}", handler.GetShortURLHandler)
 	r.Post("/", handler.CreateShortURLHandler)
-	r.Post("/api/shorten", handler.CreateShortJsonURLHandler)
+	r.Post("/api/shorten", handler.CreateShortJSONURLHandler)
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusUnauthorized)

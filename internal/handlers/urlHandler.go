@@ -19,7 +19,7 @@ func NewURLHandler(service *services.URLService, baseURL string) *URLHandler {
 	return &URLHandler{service: service, baseURL: baseURL}
 }
 
-func (us *URLHandler) CreateShortJsonURLHandler(w http.ResponseWriter, r *http.Request) {
+func (us *URLHandler) CreateShortJSONURLHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.ShortenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "iempty or invalid body", http.StatusBadRequest)
