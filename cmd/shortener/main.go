@@ -30,6 +30,7 @@ func main() {
 
 	middlewares.InitLogger(sugar)
 	r.Use(middlewares.LoggingMiddleware)
+	r.Use(middlewares.GzipMiddleware)
 
 	r.Get("/{id}", handler.GetShortURLHandler)
 	r.Post("/", handler.CreateShortURLHandler)
