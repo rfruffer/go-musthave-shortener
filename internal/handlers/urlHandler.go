@@ -5,7 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/go-chi/chi"
+	// "github.com/go-chi/chi"
+	"github.com/gorilla/mux"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 )
@@ -62,7 +63,9 @@ func (us *URLHandler) CreateShortURLHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (us *URLHandler) GetShortURLHandler(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
+	// id := chi.URLParam(r, "id")
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	if id == "" {
 		http.Error(w, "missing ID", http.StatusBadRequest)

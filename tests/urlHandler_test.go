@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi"
+	// "github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
+	"github.com/rfruffer/go-musthave-shortener/cmd/shortener/router"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
@@ -27,25 +28,32 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 	var savedID string
 	repo := repository.NewInMemoryStore()
 	service := services.NewURLService(repo)
-	handler := handlers.NewURLHandler(service, "")
+	shortURLhandler := handlers.NewURLHandler(service, "")
 
-	r := chi.NewRouter()
-	r.Get("/{id}", handler.GetShortURLHandler)
-	r.Post("/", handler.CreateShortURLHandler)
-	r.Post("/api/shorten", handler.CreateShortJSONURLHandler)
-
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "invalid request", http.StatusUnauthorized)
+	router := router.SetupRouter(router.Router{
+		UrlHandler: shortURLhandler,
 	})
 
-	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "invalid request", http.StatusUnauthorized)
-	})
-
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(router)
 	defer server.Close()
 
-	handler.SetResultHost(server.URL)
+	// r := chi.NewRouter()
+	// r.Get("/{id}", handler.GetShortURLHandler)
+	// r.Post("/", handler.CreateShortURLHandler)
+	// r.Post("/api/shorten", handler.CreateShortJSONURLHandler)
+
+	// r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+	// 	http.Error(w, "invalid request", http.StatusUnauthorized)
+	// })
+
+	// r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+	// 	http.Error(w, "invalid request", http.StatusUnauthorized)
+	// })
+
+	// server := httptest.NewServer(r)
+	// defer server.Close()
+
+	shortURLhandler.SetResultHost(server.URL)
 
 	tests := []struct {
 		name      string
@@ -125,7 +133,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			body:   "",
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				statusCode:  http.StatusUnauthorized,
+				statusCode:  http.StatusBadRequest,
 				response:    "invalid request\n",
 			},
 		},
@@ -143,23 +151,23 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 				},
 			})
 
-			req := client.R()
+			request := client.R()
 
 			if tt.isJSON {
-				req.SetHeader("Content-Type", "application/json")
+				request.SetHeader("Content-Type", "application/json")
 			} else {
-				req.SetHeader("Content-Type", "text/plain")
+				request.SetHeader("Content-Type", "text/plain")
 			}
 
-			if tt.method == http.MethodPost {
-				req.SetBody(tt.body)
-			}
+			// if tt.method == http.MethodPost {
+			// 	request.SetBody(tt.body)
+			// }
 
 			var resp *resty.Response
 			var err error
 
-			request := client.R().
-				SetHeader("Content-Type", "text/plain")
+			// request := client.R().
+			// 	SetHeader("Content-Type", "text/plain")
 
 			switch tt.method {
 			case http.MethodPost:
