@@ -96,7 +96,7 @@ func GzipMiddleware(h http.Handler) http.Handler {
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 
-		if sendsGzip && isJSON {
+		if sendsGzip && isJSON && r.Method == http.MethodPost {
 			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
