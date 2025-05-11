@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	// "github.com/go-chi/chi"
 	"github.com/go-resty/resty/v2"
 	"github.com/rfruffer/go-musthave-shortener/cmd/shortener/router"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
@@ -31,27 +30,11 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 	shortURLhandler := handlers.NewURLHandler(service, "")
 
 	router := router.SetupRouter(router.Router{
-		UrlHandler: shortURLhandler,
+		URLHandler: shortURLhandler,
 	})
 
 	server := httptest.NewServer(router)
 	defer server.Close()
-
-	// r := chi.NewRouter()
-	// r.Get("/{id}", handler.GetShortURLHandler)
-	// r.Post("/", handler.CreateShortURLHandler)
-	// r.Post("/api/shorten", handler.CreateShortJSONURLHandler)
-
-	// r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-	// 	http.Error(w, "invalid request", http.StatusUnauthorized)
-	// })
-
-	// r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-	// 	http.Error(w, "invalid request", http.StatusUnauthorized)
-	// })
-
-	// server := httptest.NewServer(r)
-	// defer server.Close()
 
 	shortURLhandler.SetResultHost(server.URL)
 
