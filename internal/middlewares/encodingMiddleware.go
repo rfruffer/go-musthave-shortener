@@ -71,42 +71,30 @@ func (c *compressReader) Close() error {
 
 func GzipMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
-		// который будем передавать следующей функции
-		ow := w
 
-		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
-		acceptEncoding := r.Header.Get("Accept-Encoding")
-		supportsGzip := strings.Contains(acceptEncoding, "gzip")
-		contentType := r.Header.Get("Content-Type")
-		isJSON := strings.HasPrefix(contentType, "application/json")
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") &&
+			strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") &&
+			r.Method == http.MethodPost {
 
-		if supportsGzip && isJSON && r.Method == http.MethodPost {
-			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия
-			cw := newCompressWriter(w)
-			// меняем оригинальный http.ResponseWriter на новый
-			ow = cw
-			// не забываем отправить клиенту все сжатые данные после завершения middleware
-			defer cw.Close()
-		}
-
-		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
-		contentEncoding := r.Header.Get("Content-Encoding")
-		sendsGzip := strings.Contains(contentEncoding, "gzip")
-
-		if sendsGzip && isJSON && r.Method == http.MethodPost {
-			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+				http.Error(w, "failed to decompress request", http.StatusBadRequest)
 				return
 			}
-			// меняем тело запроса на новое
-			r.Body = cr
 			defer cr.Close()
+			r.Body = cr
 		}
 
-		// передаём управление хендлеру
-		h.ServeHTTP(ow, r)
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			h.ServeHTTP(w, r)
+			return
+		}
+
+		cw := newCompressWriter(w)
+		defer cw.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+
+		h.ServeHTTP(cw, r)
 	})
 }
