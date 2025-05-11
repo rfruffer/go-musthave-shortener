@@ -26,10 +26,17 @@ func (c *compressWriter) Header() http.Header {
 }
 
 func (c *compressWriter) Write(p []byte) (int, error) {
+	if c.w.Header().Get("Content-Encoding") != "gzip" {
+		return c.w.Write(p)
+	}
 	return c.zw.Write(p)
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
+	if statusCode >= 300 && statusCode < 400 {
+		c.w.WriteHeader(statusCode)
+		return
+	}
 	c.w.Header().Set("Content-Encoding", "gzip")
 	c.w.WriteHeader(statusCode)
 }
