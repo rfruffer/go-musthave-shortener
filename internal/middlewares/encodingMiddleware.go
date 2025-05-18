@@ -9,47 +9,49 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ginResponseWriter struct {
+type gzipWriter struct {
 	gin.ResponseWriter
 	writer io.Writer
 }
 
-func (g *ginResponseWriter) Write(data []byte) (int, error) {
+func (g *gzipWriter) Write(data []byte) (int, error) {
 	return g.writer.Write(data)
 }
 
 func GinGzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		r := c.Request
+		// Decompress incoming request
+		if strings.Contains(c.Request.Header.Get("Content-Encoding"), "gzip") &&
+			strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/json") &&
+			c.Request.Method == http.MethodPost {
 
-		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") &&
-			strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") &&
-			r.Method == http.MethodPost {
-
-			gr, err := gzip.NewReader(r.Body)
+			gr, err := gzip.NewReader(c.Request.Body)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to decompress request"})
 				return
 			}
 			defer gr.Close()
-			r.Body = io.NopCloser(gr)
+
+			c.Request.Body = io.NopCloser(gr)
 		}
 
-		w := c.Writer
+		// Compress outgoing response
+		if strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
+			c.Header("Content-Encoding", "gzip")
+			c.Header("Vary", "Accept-Encoding")
 
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") &&
-			strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
-
-			gzw := gzip.NewWriter(w)
+			gzw := gzip.NewWriter(c.Writer)
 			defer gzw.Close()
 
-			c.Header("Content-Encoding", "gzip")
-			c.Writer = &ginResponseWriter{
-				ResponseWriter: w,
+			c.Writer = &gzipWriter{
+				ResponseWriter: c.Writer,
 				writer:         gzw,
 			}
-		}
 
-		c.Next()
+			c.Next()
+			_ = gzw.Close()
+		} else {
+			c.Next()
+		}
 	}
 }
