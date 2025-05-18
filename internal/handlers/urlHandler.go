@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -34,7 +35,10 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 		Result: us.baseURL + "/" + id,
 	}
 
-	c.JSON(http.StatusCreated, resp)
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(http.StatusCreated)
+	json.NewEncoder(c.Writer).Encode(resp)
+	// c.JSON(http.StatusCreated, resp)
 }
 
 func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
