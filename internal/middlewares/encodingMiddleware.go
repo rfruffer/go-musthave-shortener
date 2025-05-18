@@ -21,9 +21,7 @@ func (g *ginResponseWriter) Write(data []byte) (int, error) {
 func GinGzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		r := c.Request
-		w := c.Writer
 
-		// Декодируем входящий gzip-запрос
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") &&
 			strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") &&
 			r.Method == http.MethodPost {
@@ -37,7 +35,8 @@ func GinGzipMiddleware() gin.HandlerFunc {
 			r.Body = io.NopCloser(gr)
 		}
 
-		// Сжимаем исходящий ответ, если клиент поддерживает gzip
+		w := c.Writer
+
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") &&
 			strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
 
