@@ -93,7 +93,7 @@ func GinGzipMiddleware() gin.HandlerFunc {
 			r.Body = cr
 		}
 
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && r.Method == http.MethodPost {
 			cw := newCompressWriter(w)
 			defer cw.Close()
 
