@@ -67,7 +67,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			path:   "/api/shorten",
 			body:   `{"url": "https://practicum.yandex.ru"}`,
 			want: want{
-				contentType: "application/json; charset=utf-8",
+				contentType: "application/json",
 				statusCode:  http.StatusCreated,
 				response:    "",
 			},
