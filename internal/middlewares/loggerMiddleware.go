@@ -1,61 +1,44 @@
 package middlewares
 
 import (
-	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
 var sugar zap.SugaredLogger
 
-type (
-	responseData struct {
-		status int
-		size   int
-	}
-
-	loggingResponseWriter struct {
-		http.ResponseWriter
-		responseData *responseData
-	}
-)
+type responseData struct {
+	status int
+	size   int
+}
 
 func InitLogger(logger *zap.SugaredLogger) {
 	sugar = *logger
 }
 
-func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size
-	return size, err
-}
-
-func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode
-}
-
-func LoggingMiddleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func GinLoggingMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		start := time.Now()
 
-		respData := &responseData{}
-		lw := &loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   respData,
-		}
-
-		h.ServeHTTP(lw, r)
+		c.Next()
 
 		duration := time.Since(start)
 
+		respData := responseData{
+			status: c.Writer.Status(),
+			size:   c.Writer.Size(),
+		}
+
 		sugar.Infow("incoming request",
-			"uri", r.RequestURI,
-			"method", r.Method,
+			"uri", c.Request.RequestURI,
+			"method", c.Request.Method,
 			"status", respData.status,
 			"duration", duration,
 			"size", respData.size,
+			"client_ip", c.ClientIP(),
+			"user_agent", c.Request.UserAgent(),
 		)
-	})
+	}
 }

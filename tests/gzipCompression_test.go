@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi"
+	"github.com/gin-gonic/gin"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
 	"github.com/rfruffer/go-musthave-shortener/internal/middlewares"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
@@ -17,23 +17,21 @@ import (
 )
 
 func TestGzipCompression(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
 	repo := repository.NewInMemoryStore()
 	service := services.NewURLService(repo)
 	handler := handlers.NewURLHandler(service, "")
 
-	r := chi.NewRouter()
-	r.Use(middlewares.GzipMiddleware)
+	r := gin.New()
+	r.Use(middlewares.GinGzipMiddleware())
+	r.POST("/api/shorten", handler.CreateShortJSONURLHandler)
 
-	r.Get("/{id}", handler.GetShortURLHandler)
-	r.Post("/", handler.CreateShortURLHandler)
-	r.Post("/api/shorten", handler.CreateShortJSONURLHandler)
-
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "invalid request", http.StatusUnauthorized)
+	r.NoRoute(func(c *gin.Context) {
+		c.String(http.StatusUnauthorized, "invalid request")
 	})
-
-	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "invalid request", http.StatusUnauthorized)
+	r.NoMethod(func(c *gin.Context) {
+		c.String(http.StatusUnauthorized, "invalid request")
 	})
 
 	server := httptest.NewServer(r)
@@ -44,25 +42,24 @@ func TestGzipCompression(t *testing.T) {
 	requestBody := `{"url": "https://practicum.yandex.ru/"}`
 
 	t.Run("sends_gzip", func(t *testing.T) {
-
 		buf := bytes.NewBuffer(nil)
 		zb := gzip.NewWriter(buf)
 		_, err := zb.Write([]byte(requestBody))
 		require.NoError(t, err)
-		err = zb.Close()
+		require.NoError(t, zb.Close())
+
+		req, err := http.NewRequest("POST", server.URL+"/api/shorten", buf)
 		require.NoError(t, err)
 
-		r := httptest.NewRequest("POST", server.URL+"/api/shorten", buf)
-		r.RequestURI = ""
-		r.Header.Set("Accept-Encoding", "gzip")
-		r.Header.Set("Content-Encoding", "gzip")
-		r.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept-Encoding", "gzip")
+		req.Header.Set("Content-Encoding", "gzip")
+		req.Header.Set("Content-Type", "application/json")
 
-		resp, err := http.DefaultClient.Do(r)
+		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
-
 		defer resp.Body.Close()
+
+		require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 		zr, err := gzip.NewReader(resp.Body)
 		require.NoError(t, err)

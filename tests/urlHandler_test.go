@@ -67,7 +67,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			path:   "/api/shorten",
 			body:   `{"url": "https://practicum.yandex.ru"}`,
 			want: want{
-				contentType: "application/json",
+				contentType: "application/json; charset=utf-8",
 				statusCode:  http.StatusCreated,
 				response:    "",
 			},
@@ -94,7 +94,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				response:    "empty or invalid body\n",
+				response:    "empty or invalid body",
 			},
 		},
 		{
@@ -105,7 +105,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				response:    "cant find id in store\n",
+				response:    "cant find id in store",
 			},
 			useSaveID: false,
 		},
@@ -117,7 +117,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  http.StatusBadRequest,
-				response:    "invalid request\n",
+				response:    "invalid request",
 			},
 		},
 	}
@@ -130,7 +130,7 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 
 			client := resty.NewWithClient(&http.Client{
 				CheckRedirect: func(req *http.Request, via []*http.Request) error {
-					return http.ErrUseLastResponse // <- ключевая строка
+					return http.ErrUseLastResponse
 				},
 			})
 
@@ -142,15 +142,8 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 				request.SetHeader("Content-Type", "text/plain")
 			}
 
-			// if tt.method == http.MethodPost {
-			// 	request.SetBody(tt.body)
-			// }
-
 			var resp *resty.Response
 			var err error
-
-			// request := client.R().
-			// 	SetHeader("Content-Type", "text/plain")
 
 			switch tt.method {
 			case http.MethodPost:

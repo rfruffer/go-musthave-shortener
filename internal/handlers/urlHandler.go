@@ -1,11 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 )
@@ -19,15 +18,15 @@ func NewURLHandler(service *services.URLService, baseURL string) *URLHandler {
 	return &URLHandler{service: service, baseURL: baseURL}
 }
 
-func (us *URLHandler) CreateShortJSONURLHandler(w http.ResponseWriter, r *http.Request) {
+func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 	var req models.ShortenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "iempty or invalid body", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.String(http.StatusBadRequest, "empty or invalid body")
 		return
 	}
 	id, err := us.service.GenerateShortURL(req.URL)
 	if err != nil {
-		http.Error(w, "failed to create a short url", http.StatusNotFound)
+		c.String(http.StatusInternalServerError, "failed to create a short url")
 		return
 	}
 
@@ -35,48 +34,40 @@ func (us *URLHandler) CreateShortJSONURLHandler(w http.ResponseWriter, r *http.R
 		Result: us.baseURL + "/" + id,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	json.NewEncoder(w).Encode(resp)
+	c.JSON(http.StatusCreated, resp)
 }
 
-func (us *URLHandler) CreateShortURLHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil || len(body) == 0 {
-		http.Error(w, "empty or invalid body", http.StatusBadRequest)
+		c.String(http.StatusBadRequest, "empty or invalid body")
 		return
 	}
 	originalURL := string(body)
 	id, err := us.service.GenerateShortURL(originalURL)
 	if err != nil {
-		http.Error(w, "failed to create a short url", http.StatusNotFound)
+		c.String(http.StatusInternalServerError, "failed to create a short url")
 		return
 	}
 
 	shortURL := us.baseURL + "/" + id
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-
-	w.Write([]byte(shortURL))
+	c.Data(http.StatusCreated, "text/plain", []byte(shortURL))
 }
 
-func (us *URLHandler) GetShortURLHandler(w http.ResponseWriter, r *http.Request) {
-	// id := chi.URLParam(r, "id")
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
+	id := c.Param("id")
 
 	if id == "" {
-		http.Error(w, "missing ID", http.StatusBadRequest)
+		c.String(http.StatusBadRequest, "missing ID")
 		return
 	}
 
 	originalURL, err := us.service.RedirectURL(id)
 	if err != nil {
-		http.Error(w, "cant find id in store", http.StatusBadRequest)
+		c.String(http.StatusBadRequest, "cant find id in store")
 		return
 	}
-	http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
+	c.Redirect(http.StatusTemporaryRedirect, originalURL)
 }
 
 func (us *URLHandler) SetResultHost(host string) {

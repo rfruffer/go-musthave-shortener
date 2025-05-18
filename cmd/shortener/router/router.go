@@ -3,10 +3,9 @@ package router
 import (
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
 	"github.com/rfruffer/go-musthave-shortener/internal/middlewares"
-
 	"go.uber.org/zap"
 )
 
@@ -15,8 +14,6 @@ type Router struct {
 }
 
 func SetupRouter(rt Router) http.Handler {
-	r := mux.NewRouter()
-
 	logger, err := zap.NewProduction()
 	if err != nil {
 		panic(err)
@@ -24,24 +21,25 @@ func SetupRouter(rt Router) http.Handler {
 	defer logger.Sync()
 	sugar := logger.Sugar()
 
+	r := gin.New()
+
 	middlewares.InitLogger(sugar)
-	r.Use(middlewares.LoggingMiddleware)
+	r.Use(middlewares.GinLoggingMiddleware())
+	r.Use(gin.Recovery())
 
-	r.HandleFunc("/{id}", rt.URLHandler.GetShortURLHandler).Methods("GET")
-	r.HandleFunc("/", rt.URLHandler.CreateShortURLHandler).Methods("POST")
+	r.POST("/", rt.URLHandler.CreateShortURLHandler)
+	r.GET("/:id", rt.URLHandler.GetShortURLHandler)
 
-	api := r.PathPrefix("/api").Subrouter()
-	api.Use(middlewares.GzipMiddleware)
-	api.HandleFunc("/shorten", rt.URLHandler.CreateShortJSONURLHandler).Methods("POST")
+	api := r.Group("/api")
+	api.Use(middlewares.GinGzipMiddleware())
+	api.POST("/shorten", rt.URLHandler.CreateShortJSONURLHandler)
 
-	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	r.NoRoute(func(c *gin.Context) {
+		c.String(http.StatusBadRequest, "invalid request")
 	})
 
-	r.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	r.NoMethod(func(c *gin.Context) {
+		c.String(http.StatusBadRequest, "invalid request")
 	})
 
 	return r

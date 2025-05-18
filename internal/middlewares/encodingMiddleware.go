@@ -5,10 +5,10 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
-// compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
-// сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
@@ -26,28 +26,18 @@ func (c *compressWriter) Header() http.Header {
 }
 
 func (c *compressWriter) Write(p []byte) (int, error) {
-	if c.w.Header().Get("Content-Encoding") != "gzip" {
-		return c.w.Write(p)
-	}
 	return c.zw.Write(p)
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
-	if statusCode >= 300 && statusCode < 400 {
-		c.w.WriteHeader(statusCode)
-		return
-	}
 	c.w.Header().Set("Content-Encoding", "gzip")
 	c.w.WriteHeader(statusCode)
 }
 
-// Close закрывает gzip.Writer и досылает все данные из буфера.
 func (c *compressWriter) Close() error {
 	return c.zw.Close()
 }
 
-// compressReader реализует интерфейс io.ReadCloser и позволяет прозрачно для сервера
-// декомпрессировать получаемые от клиента данные
 type compressReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader
@@ -76,8 +66,19 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
-func GzipMiddleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+type ginResponseWriter struct {
+	gin.ResponseWriter
+	writer io.Writer
+}
+
+func (g *ginResponseWriter) Write(data []byte) (int, error) {
+	return g.writer.Write(data)
+}
+
+func GinGzipMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		r := c.Request
+		w := c.Writer
 
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") &&
 			strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") &&
@@ -85,21 +86,24 @@ func GzipMiddleware(h http.Handler) http.Handler {
 
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
-				http.Error(w, "failed to decompress request", http.StatusBadRequest)
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to decompress request"})
 				return
 			}
 			defer cr.Close()
 			r.Body = cr
 		}
 
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			h.ServeHTTP(w, r)
-			return
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			cw := newCompressWriter(w)
+			defer cw.Close()
+
+			c.Writer = &ginResponseWriter{
+				ResponseWriter: w,
+				writer:         cw.zw,
+			}
+			c.Header("Content-Encoding", "gzip")
 		}
 
-		cw := newCompressWriter(w)
-		defer cw.Close()
-
-		h.ServeHTTP(cw, r)
-	})
+		c.Next()
+	}
 }
