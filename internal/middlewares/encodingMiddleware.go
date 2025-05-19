@@ -20,28 +20,35 @@ func (g *gzipWriter) Write(data []byte) (int, error) {
 
 func GinGzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Decompress incoming request
-		if strings.Contains(c.Request.Header.Get("Content-Encoding"), "gzip") &&
-			strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/json") &&
-			c.Request.Method == http.MethodPost {
-
+		if strings.Contains(c.GetHeader("Content-Encoding"), "gzip") {
 			gr, err := gzip.NewReader(c.Request.Body)
 			if err != nil {
-				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to decompress request"})
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
 			defer gr.Close()
-
 			c.Request.Body = io.NopCloser(gr)
 		}
 
-		// Compress outgoing response
-		if strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
-			c.Header("Content-Encoding", "gzip")
-			c.Header("Vary", "Accept-Encoding")
+		if !strings.Contains(c.GetHeader("Accept-Encoding"), "gzip") {
+			c.Next()
+			return
+		}
+
+		contentType := c.GetHeader("Content-Type")
+		if contentType == "" {
+			contentType = http.DetectContentType([]byte{})
+		}
+
+		if strings.Contains(contentType, "application/json") ||
+			strings.Contains(contentType, "text/html") ||
+			strings.Contains(contentType, "text/plain") {
 
 			gzw := gzip.NewWriter(c.Writer)
 			defer gzw.Close()
+
+			c.Header("Content-Encoding", "gzip")
+			c.Header("Vary", "Accept-Encoding")
 
 			c.Writer = &gzipWriter{
 				ResponseWriter: c.Writer,
@@ -50,8 +57,8 @@ func GinGzipMiddleware() gin.HandlerFunc {
 
 			c.Next()
 			_ = gzw.Close()
-		} else {
-			c.Next()
+			return
 		}
+		c.Next()
 	}
 }
