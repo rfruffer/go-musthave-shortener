@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,7 +45,18 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 }
 
 func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
-	body, err := io.ReadAll(c.Request.Body)
+	var reader io.Reader = c.Request.Body
+	if c.Request.Header.Get("Content-Encoding") == "gzip" {
+		gzReader, err := gzip.NewReader(c.Request.Body)
+		if err != nil {
+			c.String(http.StatusBadRequest, "failed to read gzip body")
+			return
+		}
+		defer gzReader.Close()
+		reader = gzReader
+	}
+
+	body, err := io.ReadAll(reader)
 	if err != nil || len(body) == 0 {
 		c.String(http.StatusBadRequest, "empty or invalid body")
 		return
@@ -59,6 +71,23 @@ func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
 	shortURL := us.baseURL + "/" + id
 	c.Data(http.StatusCreated, "text/plain", []byte(shortURL))
 }
+
+// func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
+// 	body, err := io.ReadAll(c.Request.Body)
+// 	if err != nil || len(body) == 0 {
+// 		c.String(http.StatusBadRequest, "empty or invalid body")
+// 		return
+// 	}
+// 	originalURL := string(body)
+// 	id, err := us.service.GenerateShortURL(originalURL)
+// 	if err != nil {
+// 		c.String(http.StatusInternalServerError, "failed to create a short url")
+// 		return
+// 	}
+
+// 	shortURL := us.baseURL + "/" + id
+// 	c.Data(http.StatusCreated, "text/plain", []byte(shortURL))
+// }
 
 func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
 	id := c.Param("id")
