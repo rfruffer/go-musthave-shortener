@@ -30,12 +30,9 @@ func SetupRouter(rt Router) http.Handler {
 	r.POST("/", rt.URLHandler.CreateShortURLHandler)
 	r.GET("/:id", rt.URLHandler.GetShortURLHandler)
 
-	r.Use(middlewares.GinGzipMiddleware())
-	r.POST("/api/shorten", rt.URLHandler.CreateShortJSONURLHandler)
-
-	// api := r.Group("/api")
-	// api.Use(middlewares.GinGzipMiddleware())
-	// api.POST("/shorten", rt.URLHandler.CreateShortJSONURLHandler)
+	api := r.Group("/api")
+	api.Use(middlewares.GinGzipMiddleware())
+	api.POST("/shorten", rt.URLHandler.CreateShortJSONURLHandler)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusBadRequest, "invalid request")
