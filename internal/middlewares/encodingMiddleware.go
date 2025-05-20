@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -20,7 +21,9 @@ func (g *gzipWriter) Write(data []byte) (int, error) {
 
 func GinGzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !strings.HasPrefix(c.FullPath(), "/api") {
+		fmt.Println("[DEBUG] FullPath:", c.FullPath(), "URI:", c.Request.RequestURI)
+
+		if !strings.HasPrefix(c.Request.URL.Path, "/api/") && c.Request.URL.Path != "/api" {
 			c.Next()
 			return
 		}
