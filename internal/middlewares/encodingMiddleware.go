@@ -20,6 +20,10 @@ func (g *gzipWriter) Write(data []byte) (int, error) {
 
 func GinGzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if !strings.HasPrefix(c.FullPath(), "/api") {
+			c.Next()
+			return
+		}
 		if strings.Contains(c.GetHeader("Content-Encoding"), "gzip") {
 			gr, err := gzip.NewReader(c.Request.Body)
 			if err != nil {
@@ -48,7 +52,7 @@ func GinGzipMiddleware() gin.HandlerFunc {
 			defer gzw.Close()
 
 			c.Header("Content-Encoding", "gzip")
-			c.Header("Vary", "Accept-Encoding")
+			// c.Header("Vary", "Accept-Encoding")
 
 			c.Writer = &gzipWriter{
 				ResponseWriter: c.Writer,
