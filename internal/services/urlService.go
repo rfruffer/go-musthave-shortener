@@ -5,11 +5,11 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 )
 
 var (
-	store     = make(map[string]string)
 	shortSize = 8
 )
 
@@ -28,7 +28,11 @@ func (s *URLService) GenerateShortURL(originalURL string) (string, error) {
 		return "", err
 	}
 	id := base64.URLEncoding.EncodeToString(b)[:shortSize]
-	s.repo.Save(id, originalURL)
+	uuid := uuid.New().String()
+	err = s.repo.Save(id, originalURL, uuid)
+	if err != nil {
+		return "", err
+	}
 	return id, nil
 }
 
