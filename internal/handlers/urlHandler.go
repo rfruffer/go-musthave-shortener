@@ -99,3 +99,30 @@ func (us *URLHandler) Ping(c *gin.Context) {
 	}
 	c.Writer.WriteHeader(http.StatusOK)
 }
+
+func (us *URLHandler) Batch(c *gin.Context) {
+	var req []models.BatchOriginalURL
+	if err := c.ShouldBindJSON(&req); err != nil || len(req) == 0 {
+		c.String(http.StatusBadRequest, "empty or invalid body")
+		return
+	}
+
+	resp := make([]models.BatchShortURL, 0, len(req))
+
+	for _, item := range req {
+		id, err := us.service.GenerateShortURL(item.OriginalURL)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "failed to create a short url")
+			return
+		}
+
+		resp = append(resp, models.BatchShortURL{
+			CorrelationID: item.CorrelationID,
+			ShortURL:      us.baseURL + "/" + id,
+		})
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(http.StatusCreated)
+	json.NewEncoder(c.Writer).Encode(resp)
+}

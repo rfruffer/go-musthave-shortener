@@ -42,6 +42,6 @@ func (d *DBStore) LoadFromFile(path string) error {
 	return nil
 }
 
-func (s *DBStore) Ping() error {
-	return s.db.Ping(context.Background())
+func (d *DBStore) Ping() error {
+	return d.db.Ping(context.Background())
 }

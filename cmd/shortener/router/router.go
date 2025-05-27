@@ -34,6 +34,7 @@ func SetupRouter(rt Router) http.Handler {
 	api := r.Group("/api")
 	api.Use(middlewares.GinGzipMiddleware())
 	api.POST("/shorten", rt.URLHandler.CreateShortJSONURLHandler)
+	api.POST("/shorten/batch", rt.URLHandler.Batch)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusBadRequest, "invalid request")
