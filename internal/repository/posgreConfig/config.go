@@ -14,9 +14,6 @@ func InitDB(dsn string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error parsing database config: %w", err)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("error parsing database config: %w", err)
-	}
 	config.MaxConns = 10
 	config.MaxConnLifetime = 30 * time.Minute
 
