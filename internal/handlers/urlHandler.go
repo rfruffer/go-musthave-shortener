@@ -8,16 +8,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
+	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 )
 
 type URLHandler struct {
 	service *services.URLService
 	baseURL string
+	db      repository.StoreRepositoryInterface
 }
 
-func NewURLHandler(service *services.URLService, baseURL string) *URLHandler {
-	return &URLHandler{service: service, baseURL: baseURL}
+func NewURLHandler(service *services.URLService, baseURL string, db repository.StoreRepositoryInterface) *URLHandler {
+	return &URLHandler{service: service, baseURL: baseURL, db: db}
 }
 
 func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
@@ -70,67 +72,6 @@ func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
 	c.Data(http.StatusCreated, "text/plain", []byte(shortURL))
 }
 
-// func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
-// 	id := c.Param("id")
-
-// 	fmt.Println("=== DEBUG START ===")
-// 	fmt.Println("[DEBUG] Method:", c.Request.Method)
-// 	fmt.Println("[DEBUG] Host:", c.Request.Host)
-// 	fmt.Println("[DEBUG] FullPath:", c.FullPath())
-// 	fmt.Println("[DEBUG] RequestURI:", c.Request.RequestURI)
-// 	fmt.Println("[DEBUG] Path:", c.Request.URL.Path)
-// 	fmt.Println("[DEBUG] Param ID:", id)
-
-// 	// Query-параметры
-// 	fmt.Println("[DEBUG] Query Params:")
-// 	for key, values := range c.Request.URL.Query() {
-// 		for _, value := range values {
-// 			fmt.Printf("  %s: %s\n", key, value)
-// 		}
-// 	}
-
-// 	// Заголовки
-// 	fmt.Println("[DEBUG] Headers:")
-// 	for name, values := range c.Request.Header {
-// 		for _, value := range values {
-// 			fmt.Printf("  %s: %s\n", name, value)
-// 		}
-// 	}
-
-// 	// Попробуем прочитать тело запроса (если вдруг кто-то туда что-то шлёт)
-// 	bodyBytes, err := io.ReadAll(c.Request.Body)
-// 	if err != nil {
-// 		fmt.Println("[DEBUG] Error reading body:", err)
-// 	} else if len(bodyBytes) > 0 {
-// 		fmt.Println("[DEBUG] Body:", string(bodyBytes))
-// 	} else {
-// 		fmt.Println("[DEBUG] Body: <empty>")
-// 	}
-
-// 	// Вернём тело обратно, чтобы middleware или gin могли его использовать дальше
-// 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-// 	if id == "" {
-// 		fmt.Println("[DEBUG] ID is empty")
-// 		c.String(http.StatusBadRequest, "missing ID")
-// 		fmt.Println("=== DEBUG END ===")
-// 		return
-// 	}
-
-// 	originalURL, err := us.service.RedirectURL(id)
-// 	if err != nil {
-// 		fmt.Println("[DEBUG] RedirectURL error:", err)
-// 		c.String(http.StatusBadRequest, "cant find id in store")
-// 		fmt.Println("=== DEBUG END ===")
-// 		return
-// 	}
-
-// 	fmt.Println("[DEBUG] Redirecting to:", originalURL)
-// 	fmt.Println("=== DEBUG END ===")
-
-// 	c.Redirect(http.StatusTemporaryRedirect, originalURL)
-// }
-
 func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
 	id := c.Param("id")
 
@@ -149,4 +90,12 @@ func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
 
 func (us *URLHandler) SetResultHost(host string) {
 	us.baseURL = host
+}
+
+func (us *URLHandler) Ping(c *gin.Context) {
+	if err := us.db.Ping(); err != nil {
+		c.String(http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	c.Writer.WriteHeader(http.StatusOK)
 }

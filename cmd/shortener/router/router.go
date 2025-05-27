@@ -29,6 +29,7 @@ func SetupRouter(rt Router) http.Handler {
 
 	r.POST("/", rt.URLHandler.CreateShortURLHandler)
 	r.GET("/:id", rt.URLHandler.GetShortURLHandler)
+	r.GET("/ping", rt.URLHandler.Ping)
 
 	api := r.Group("/api")
 	api.Use(middlewares.GinGzipMiddleware())

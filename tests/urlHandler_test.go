@@ -25,9 +25,9 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 	}
 
 	var savedID string
-	repo := repository.NewInMemoryStore()
+	repo := repository.NewInFileStore()
 	service := services.NewURLService(repo)
-	shortURLhandler := handlers.NewURLHandler(service, "")
+	shortURLhandler := handlers.NewURLHandler(service, "", nil)
 
 	router := router.SetupRouter(router.Router{
 		URLHandler: shortURLhandler,

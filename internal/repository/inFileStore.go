@@ -6,31 +6,27 @@ import (
 	"errors"
 	"os"
 	"sync"
+
+	"github.com/rfruffer/go-musthave-shortener/internal/models"
 )
 
-type URLEntry struct {
-	UUID        string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
-
-type InMemoryStore struct {
+type InFileStore struct {
 	mu    sync.RWMutex
-	store map[string]URLEntry
+	store map[string]models.URLEntry
 }
 
-func NewInMemoryStore() *InMemoryStore {
-	return &InMemoryStore{store: make(map[string]URLEntry)}
+func NewInFileStore() *InFileStore {
+	return &InFileStore{store: make(map[string]models.URLEntry)}
 }
 
-func (s *InMemoryStore) Save(shortID, originalURL, uuid string) error {
+func (s *InFileStore) Save(shortID, originalURL, uuid string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.store[shortID] = URLEntry{UUID: uuid, ShortURL: shortID, OriginalURL: originalURL}
+	s.store[shortID] = models.URLEntry{UUID: uuid, ShortURL: shortID, OriginalURL: originalURL}
 	return nil
 }
 
-func (s *InMemoryStore) Get(shortID string) (string, error) {
+func (s *InFileStore) Get(shortID string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	entry, ok := s.store[shortID]
@@ -40,7 +36,7 @@ func (s *InMemoryStore) Get(shortID string) (string, error) {
 	return entry.OriginalURL, nil
 }
 
-func (s *InMemoryStore) SaveToFile(path string) error {
+func (s *InFileStore) SaveToFile(path string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	file, err := os.Create(path)
@@ -57,7 +53,7 @@ func (s *InMemoryStore) SaveToFile(path string) error {
 	return nil
 }
 
-func (s *InMemoryStore) LoadFromFile(path string) error {
+func (s *InFileStore) LoadFromFile(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -69,11 +65,15 @@ func (s *InMemoryStore) LoadFromFile(path string) error {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		var entry URLEntry
+		var entry models.URLEntry
 		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
 			continue
 		}
 		s.store[entry.ShortURL] = entry
 	}
 	return scanner.Err()
+}
+
+func (s *InFileStore) Ping() error {
+	return nil
 }

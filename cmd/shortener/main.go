@@ -11,19 +11,37 @@ import (
 	"github.com/rfruffer/go-musthave-shortener/config"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
+	posgreConfig "github.com/rfruffer/go-musthave-shortener/internal/repository/posgreConfig"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 )
 
 func main() {
 	cfg := config.ParseFlags()
 
-	repo := repository.NewInMemoryStore()
+	var repo repository.StoreRepositoryInterface
+	var service *services.URLService
+	var shortURLHandler *handlers.URLHandler
+
+	switch cfg.Storage {
+	case "postgres":
+		db, err := posgreConfig.InitDB(cfg.DBDSN)
+		if err != nil {
+			log.Fatalf("failed to initialize database: %v", err)
+		}
+		defer posgreConfig.CloseDB(db)
+		repo = repository.NewDBStore(db)
+
+		service = services.NewURLService(repo)
+		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost, repo)
+	default:
+		repo = repository.NewInFileStore()
+		service = services.NewURLService(repo)
+		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost, nil)
+	}
+
 	if err := repo.LoadFromFile(cfg.FilePath); err != nil {
 		log.Fatalf("failed to load from file: %v", err)
 	}
-
-	service := services.NewURLService(repo)
-	shortURLHandler := handlers.NewURLHandler(service, cfg.ResultHost)
 
 	r := router.SetupRouter(router.Router{
 		URLHandler: shortURLHandler,

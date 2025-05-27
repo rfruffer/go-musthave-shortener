@@ -14,10 +14,10 @@ var (
 )
 
 type URLService struct {
-	repo *repository.InMemoryStore
+	repo repository.StoreRepositoryInterface
 }
 
-func NewURLService(repo *repository.InMemoryStore) *URLService {
+func NewURLService(repo repository.StoreRepositoryInterface) *URLService {
 	return &URLService{repo: repo}
 }
 

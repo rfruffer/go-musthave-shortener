@@ -19,9 +19,9 @@ import (
 func TestGzipCompression(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	repo := repository.NewInMemoryStore()
+	repo := repository.NewInFileStore()
 	service := services.NewURLService(repo)
-	handler := handlers.NewURLHandler(service, "")
+	handler := handlers.NewURLHandler(service, "", nil)
 
 	r := gin.New()
 	r.Use(middlewares.GinGzipMiddleware())
