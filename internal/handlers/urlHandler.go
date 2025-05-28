@@ -30,6 +30,7 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "empty or invalid body")
 		return
 	}
+
 	id, err := us.service.GenerateShortURL(req.URL)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
@@ -38,7 +39,10 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 				c.String(http.StatusInternalServerError, "internal error")
 				return
 			}
-			c.Data(http.StatusConflict, "text/plain", []byte(us.baseURL+"/"+existingShortID))
+			resp := models.ShortenResponse{
+				Result: us.baseURL + "/" + existingShortID,
+			}
+			c.JSON(http.StatusConflict, resp)
 			return
 		}
 		c.String(http.StatusInternalServerError, "failed to create a short url")
@@ -48,11 +52,7 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 	resp := models.ShortenResponse{
 		Result: us.baseURL + "/" + id,
 	}
-
-	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(c.Writer).Encode(resp)
-	// c.JSON(http.StatusCreated, resp)
+	c.JSON(http.StatusCreated, resp)
 }
 
 func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
