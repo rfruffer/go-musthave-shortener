@@ -43,7 +43,7 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 				Result: us.baseURL + "/" + existingShortID,
 			}
 			c.Writer.Header().Set("Content-Type", "application/json")
-			c.Writer.WriteHeader(http.StatusCreated)
+			c.Writer.WriteHeader(http.StatusConflict)
 			json.NewEncoder(c.Writer).Encode(resp)
 			// c.JSON(http.StatusConflict, resp)
 			return
