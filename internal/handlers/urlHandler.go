@@ -42,7 +42,10 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 			resp := models.ShortenResponse{
 				Result: us.baseURL + "/" + existingShortID,
 			}
-			c.JSON(http.StatusConflict, resp)
+			c.Writer.Header().Set("Content-Type", "application/json")
+			c.Writer.WriteHeader(http.StatusCreated)
+			json.NewEncoder(c.Writer).Encode(resp)
+			// c.JSON(http.StatusConflict, resp)
 			return
 		}
 		c.String(http.StatusInternalServerError, "failed to create a short url")
@@ -52,7 +55,10 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 	resp := models.ShortenResponse{
 		Result: us.baseURL + "/" + id,
 	}
-	c.JSON(http.StatusCreated, resp)
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(http.StatusCreated)
+	json.NewEncoder(c.Writer).Encode(resp)
+	// c.JSON(http.StatusCreated, resp)
 }
 
 func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
