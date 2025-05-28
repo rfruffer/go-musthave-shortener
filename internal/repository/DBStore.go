@@ -17,11 +17,13 @@ func NewDBStore(db *pgxpool.Pool) *DBStore {
 func (d *DBStore) Save(shortID, originalURL, uuid string) error {
 	const query = `
 		INSERT INTO short_urls (short_id, original_url, user_uuid)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (short_id) DO UPDATE SET original_url = EXCLUDED.original_url;
+		VALUES ($1, $2, $3);
 	`
 	_, err := d.db.Exec(context.Background(), query, shortID, originalURL, uuid)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *DBStore) Get(shortID string) (string, error) {
@@ -44,4 +46,14 @@ func (d *DBStore) LoadFromFile(path string) error {
 
 func (d *DBStore) Ping() error {
 	return d.db.Ping(context.Background())
+}
+
+func (d *DBStore) GetShortIDByOriginalURL(originalURL string) (string, error) {
+	const query = `SELECT short_id FROM short_urls WHERE original_url = $1`
+	var shortID string
+	err := d.db.QueryRow(context.Background(), query, originalURL).Scan(&shortID)
+	if err != nil {
+		return "", err
+	}
+	return shortID, nil
 }

@@ -77,3 +77,7 @@ func (s *InFileStore) LoadFromFile(path string) error {
 func (s *InFileStore) Ping() error {
 	return nil
 }
+
+func (s *InFileStore) GetShortIDByOriginalURL(originalURL string) (string, error) {
+	return "", nil
+}

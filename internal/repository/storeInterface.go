@@ -8,4 +8,5 @@ type StoreRepositoryInterface interface {
 	LoadFromFile(path string) error
 
 	Ping() error
+	GetShortIDByOriginalURL(originalURL string) (string, error)
 }

@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
@@ -30,6 +32,15 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 	}
 	id, err := us.service.GenerateShortURL(req.URL)
 	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			existingShortID, getErr := us.db.GetShortIDByOriginalURL(req.URL)
+			if getErr != nil {
+				c.String(http.StatusInternalServerError, "internal error")
+				return
+			}
+			c.Data(http.StatusConflict, "text/plain", []byte(us.baseURL+"/"+existingShortID))
+			return
+		}
 		c.String(http.StatusInternalServerError, "failed to create a short url")
 		return
 	}
@@ -64,6 +75,15 @@ func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
 	originalURL := string(body)
 	id, err := us.service.GenerateShortURL(originalURL)
 	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" { // 23505 = unique_violation
+			existingShortID, getErr := us.db.GetShortIDByOriginalURL(originalURL)
+			if getErr != nil {
+				c.String(http.StatusInternalServerError, "internal error")
+				return
+			}
+			c.Data(http.StatusConflict, "text/plain", []byte(us.baseURL+"/"+existingShortID))
+			return
+		}
 		c.String(http.StatusInternalServerError, "failed to create a short url")
 		return
 	}

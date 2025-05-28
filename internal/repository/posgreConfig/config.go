@@ -35,6 +35,15 @@ func InitDB(dsn string) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
+	const createIndex = `
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_original_url_unique ON short_urls(original_url);
+	`
+	_, err = pool.Exec(context.Background(), createIndex)
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("failed to create index: %w", err)
+	}
+
 	log.Println("Database connection established")
 	return pool, nil
 }
