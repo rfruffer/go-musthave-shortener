@@ -11,6 +11,7 @@ import (
 
 type Router struct {
 	URLHandler *handlers.URLHandler
+	SecretKey  string
 }
 
 func SetupRouter(rt Router) http.Handler {
@@ -26,6 +27,7 @@ func SetupRouter(rt Router) http.Handler {
 	middlewares.InitLogger(sugar)
 	r.Use(middlewares.GinLoggingMiddleware())
 	r.Use(gin.Recovery())
+	r.Use(middlewares.AuthMiddleware(rt.SecretKey))
 
 	r.POST("/", rt.URLHandler.CreateShortURLHandler)
 	r.GET("/:id", rt.URLHandler.GetShortURLHandler)
@@ -35,6 +37,7 @@ func SetupRouter(rt Router) http.Handler {
 	api.Use(middlewares.GinGzipMiddleware())
 	api.POST("/shorten", rt.URLHandler.CreateShortJSONURLHandler)
 	api.POST("/shorten/batch", rt.URLHandler.Batch)
+	api.GET("/user/urls", rt.URLHandler.GetUserURLs)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusBadRequest, "invalid request")

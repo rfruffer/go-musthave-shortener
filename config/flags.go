@@ -11,6 +11,7 @@ type Config struct {
 	FilePath   string
 	DBDSN      string
 	Storage    string
+	SecretKey  string
 }
 
 func ParseFlags() *Config {
@@ -18,6 +19,10 @@ func ParseFlags() *Config {
 	resultHost := flag.String("b", "http://localhost:8080", "base URL for shortened links")
 	filePath := flag.String("f", "", "path to file storage")
 	dbDSN := flag.String("d", "", "database DSN for PostgreSQL")
+	secretKey := os.Getenv("SECRET_KEY")
+	if secretKey == "" {
+		secretKey = "verysecretkey"
+	}
 
 	flag.Parse()
 
@@ -45,5 +50,6 @@ func ParseFlags() *Config {
 		FilePath:   *filePath,
 		DBDSN:      *dbDSN,
 		Storage:    storage,
+		SecretKey:  secretKey,
 	}
 }

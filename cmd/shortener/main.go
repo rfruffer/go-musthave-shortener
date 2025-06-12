@@ -32,11 +32,11 @@ func main() {
 		repo = repository.NewDBStore(db)
 
 		service = services.NewURLService(repo)
-		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost, repo)
+		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost)
 	default:
 		repo = repository.NewInFileStore()
 		service = services.NewURLService(repo)
-		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost, nil)
+		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost)
 	}
 
 	if err := repo.LoadFromFile(cfg.FilePath); err != nil {
@@ -45,6 +45,7 @@ func main() {
 
 	r := router.SetupRouter(router.Router{
 		URLHandler: shortURLHandler,
+		SecretKey:  cfg.SecretKey,
 	})
 
 	server := &http.Server{

@@ -3,12 +3,12 @@ package handlers
 import (
 	"compress/gzip"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgerrcode"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
@@ -17,11 +17,10 @@ import (
 type URLHandler struct {
 	service *services.URLService
 	baseURL string
-	db      repository.StoreRepositoryInterface
 }
 
-func NewURLHandler(service *services.URLService, baseURL string, db repository.StoreRepositoryInterface) *URLHandler {
-	return &URLHandler{service: service, baseURL: baseURL, db: db}
+func NewURLHandler(service *services.URLService, baseURL string) *URLHandler {
+	return &URLHandler{service: service, baseURL: baseURL}
 }
 
 func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
@@ -30,22 +29,16 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 		c.String(http.StatusBadRequest, "empty or invalid body")
 		return
 	}
-
-	id, err := us.service.GenerateShortURL(req.URL)
+	userID := c.GetString("user_id")
+	id, err := us.service.GenerateShortURL(req.URL, userID)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
-			existingShortID, getErr := us.db.GetShortIDByOriginalURL(req.URL)
-			if getErr != nil {
-				c.String(http.StatusInternalServerError, "internal error")
-				return
-			}
+		if errors.Is(err, repository.ErrAlreadyExists) {
 			resp := models.ShortenResponse{
-				Result: us.baseURL + "/" + existingShortID,
+				Result: us.baseURL + "/" + id,
 			}
 			c.Writer.Header().Set("Content-Type", "application/json")
 			c.Writer.WriteHeader(http.StatusConflict)
 			json.NewEncoder(c.Writer).Encode(resp)
-			// c.JSON(http.StatusConflict, resp)
 			return
 		}
 		c.String(http.StatusInternalServerError, "failed to create a short url")
@@ -58,7 +51,6 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(http.StatusCreated)
 	json.NewEncoder(c.Writer).Encode(resp)
-	// c.JSON(http.StatusCreated, resp)
 }
 
 func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
@@ -79,18 +71,17 @@ func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
 		return
 	}
 	originalURL := string(body)
-	id, err := us.service.GenerateShortURL(originalURL)
+	userID := c.GetString("user_id")
+	id, err := us.service.GenerateShortURL(originalURL, userID)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" { // 23505 = unique_violation
-			existingShortID, getErr := us.db.GetShortIDByOriginalURL(originalURL)
-			if getErr != nil {
-				c.String(http.StatusInternalServerError, "internal error")
-				return
-			}
-			c.Data(http.StatusConflict, "text/plain", []byte(us.baseURL+"/"+existingShortID))
+		if errors.Is(err, repository.ErrAlreadyExists) {
+			c.Data(http.StatusConflict, "text/plain", []byte(us.baseURL+"/"+id))
 			return
 		}
 		c.String(http.StatusInternalServerError, "failed to create a short url")
+		fmt.Println("originalURL " + originalURL)
+		fmt.Println("userID " + userID)
+		fmt.Println("GenerateShortURL " + id)
 		return
 	}
 
@@ -100,7 +91,6 @@ func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
 
 func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
 	id := c.Param("id")
-
 	if id == "" {
 		c.String(http.StatusBadRequest, "missing ID")
 		return
@@ -119,7 +109,7 @@ func (us *URLHandler) SetResultHost(host string) {
 }
 
 func (us *URLHandler) Ping(c *gin.Context) {
-	if err := us.db.Ping(); err != nil {
+	if err := us.service.Ping(); err != nil {
 		c.String(http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
@@ -134,9 +124,9 @@ func (us *URLHandler) Batch(c *gin.Context) {
 	}
 
 	resp := make([]models.BatchShortURL, 0, len(req))
-
+	userID := c.GetString("user_id")
 	for _, item := range req {
-		id, err := us.service.GenerateShortURL(item.OriginalURL)
+		id, err := us.service.GenerateShortURL(item.OriginalURL, userID)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "failed to create a short url")
 			return
@@ -151,4 +141,33 @@ func (us *URLHandler) Batch(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(http.StatusCreated)
 	json.NewEncoder(c.Writer).Encode(resp)
+}
+
+func (us *URLHandler) GetUserURLs(c *gin.Context) {
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+	userID := userIDRaw.(string)
+
+	urls, err := us.service.GetURLsByUser(userID)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to get user urls")
+		return
+	}
+	if len(urls) == 0 {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	resp := make([]models.URLEntry, 0, len(urls))
+	for _, u := range urls {
+		resp = append(resp, models.URLEntry{
+			ShortURL:    us.baseURL + "/" + u.ShortURL,
+			OriginalURL: u.OriginalURL,
+		})
+	}
+
+	c.JSON(http.StatusOK, resp)
 }

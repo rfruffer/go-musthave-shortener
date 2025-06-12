@@ -81,3 +81,7 @@ func (s *InFileStore) Ping() error {
 func (s *InFileStore) GetShortIDByOriginalURL(originalURL string) (string, error) {
 	return "", nil
 }
+
+func (s *InFileStore) GetByUser(userID string) ([]models.URLEntry, error) {
+	return []models.URLEntry{}, nil
+}

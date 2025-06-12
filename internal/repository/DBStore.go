@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rfruffer/go-musthave-shortener/internal/models"
 )
 
 type DBStore struct {
@@ -56,4 +57,24 @@ func (d *DBStore) GetShortIDByOriginalURL(originalURL string) (string, error) {
 		return "", err
 	}
 	return shortID, nil
+}
+
+func (d *DBStore) GetByUser(userID string) ([]models.URLEntry, error) {
+	const query = `SELECT short_id, original_url FROM short_urls WHERE user_uuid = $1;`
+
+	rows, err := d.db.Query(context.Background(), query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []models.URLEntry
+	for rows.Next() {
+		var url models.URLEntry
+		if err := rows.Scan(&url.ShortURL, &url.OriginalURL); err != nil {
+			return nil, err
+		}
+		results = append(results, url)
+	}
+	return results, nil
 }
