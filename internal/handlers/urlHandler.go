@@ -99,6 +99,10 @@ func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
 
 	originalURL, err := us.service.RedirectURL(id)
 	if err != nil {
+		if errors.Is(err, repository.ErrGone) {
+			c.String(http.StatusGone, "url deleted")
+			return
+		}
 		c.String(http.StatusBadRequest, "cant find id in store")
 		return
 	}
