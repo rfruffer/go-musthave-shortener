@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	// "github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 )
@@ -27,14 +28,20 @@ func (d *DBStore) Save(shortID, originalURL, uuid string) error {
 	return nil
 }
 
-func (d *DBStore) Get(shortID string) (string, error) {
-	const query = `SELECT original_url FROM short_urls WHERE short_id = $1;`
-	var url string
-	err := d.db.QueryRow(context.Background(), query, shortID).Scan(&url)
+func (d *DBStore) GetURLByShort(shortID string) (models.URLEntry, error) {
+	const query = `SELECT user_uuid, short_id, original_url, is_deleted FROM short_urls WHERE short_id = $1;`
+	var entry models.URLEntry
+	err := d.db.QueryRow(context.Background(), query, shortID).Scan(
+		&entry.UUID,
+		&entry.ShortURL,
+		&entry.OriginalURL,
+		&entry.DeletedFlag,
+	)
 	if err != nil {
-		return "", err
+		return models.URLEntry{}, err
 	}
-	return url, nil
+
+	return entry, nil
 }
 
 func (d *DBStore) SaveToFile(path string) error {
@@ -60,7 +67,9 @@ func (d *DBStore) GetShortIDByOriginalURL(originalURL string) (string, error) {
 }
 
 func (d *DBStore) GetByUser(userID string) ([]models.URLEntry, error) {
-	const query = `SELECT short_id, original_url FROM short_urls WHERE user_uuid = $1;`
+	const query = `SELECT short_id, original_url 
+	FROM short_urls 
+	WHERE user_uuid = $1 and is_deleted IS NOT TRUE;`
 
 	rows, err := d.db.Query(context.Background(), query, userID)
 	if err != nil {
@@ -77,4 +86,15 @@ func (d *DBStore) GetByUser(userID string) ([]models.URLEntry, error) {
 		results = append(results, url)
 	}
 	return results, nil
+}
+
+func (d *DBStore) MarkURLsDeleted(userID string, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	query := `UPDATE short_urls 
+	SET is_deleted = true 
+	WHERE user_uuid = $1 AND short_id = ANY($2);`
+	_, err := d.db.Exec(context.Background(), query, userID, ids)
+	return err
 }

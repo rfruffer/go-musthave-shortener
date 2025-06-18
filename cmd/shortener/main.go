@@ -9,6 +9,7 @@ import (
 
 	"github.com/rfruffer/go-musthave-shortener/cmd/shortener/router"
 	"github.com/rfruffer/go-musthave-shortener/config"
+	"github.com/rfruffer/go-musthave-shortener/internal/async"
 	"github.com/rfruffer/go-musthave-shortener/internal/handlers"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	posgreConfig "github.com/rfruffer/go-musthave-shortener/internal/repository/posgreConfig"
@@ -33,6 +34,10 @@ func main() {
 
 		service = services.NewURLService(repo)
 		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost)
+
+		doneCh := make(chan struct{})
+		async.StartDeleteWorker(doneCh, repo, async.DeleteQueue)
+
 	default:
 		repo = repository.NewInFileStore()
 		service = services.NewURLService(repo)

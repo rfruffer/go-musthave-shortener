@@ -38,6 +38,7 @@ func SetupRouter(rt Router) http.Handler {
 	api.POST("/shorten", rt.URLHandler.CreateShortJSONURLHandler)
 	api.POST("/shorten/batch", rt.URLHandler.Batch)
 	api.GET("/user/urls", rt.URLHandler.GetUserURLs)
+	api.DELETE("/user/urls", rt.URLHandler.BatchDeleteHandler)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusBadRequest, "invalid request")

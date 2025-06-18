@@ -26,14 +26,14 @@ func (s *InFileStore) Save(shortID, originalURL, uuid string) error {
 	return nil
 }
 
-func (s *InFileStore) Get(shortID string) (string, error) {
+func (s *InFileStore) GetURLByShort(shortID string) (models.URLEntry, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	entry, ok := s.store[shortID]
 	if !ok {
-		return "", errors.New("URL not found")
+		return models.URLEntry{}, errors.New("URL not found")
 	}
-	return entry.OriginalURL, nil
+	return entry, nil
 }
 
 func (s *InFileStore) SaveToFile(path string) error {
@@ -84,4 +84,8 @@ func (s *InFileStore) GetShortIDByOriginalURL(originalURL string) (string, error
 
 func (s *InFileStore) GetByUser(userID string) ([]models.URLEntry, error) {
 	return []models.URLEntry{}, nil
+}
+
+func (s *InFileStore) MarkURLsDeleted(userID string, ids []string) error {
+	return nil
 }

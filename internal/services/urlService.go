@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	// "sync"
+
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
@@ -48,11 +50,14 @@ func (s *URLService) GenerateShortURL(originalURL string, uuid string) (string, 
 }
 
 func (s *URLService) RedirectURL(id string) (string, error) {
-	originalURL, err := s.repo.Get(id)
+	URL, err := s.repo.GetURLByShort(id)
 	if err != nil {
 		return "", fmt.Errorf("cant find id in store")
 	}
-	return originalURL, nil
+	if URL.DeletedFlag {
+		return "", repository.ErrGone
+	}
+	return URL.OriginalURL, nil
 }
 
 func (s *URLService) Ping() error {
@@ -77,4 +82,8 @@ func (s *URLService) GenerateBatchShortURLs(req []models.BatchOriginalURL, userI
 
 func (s *URLService) GetURLsByUser(userID string) ([]models.URLEntry, error) {
 	return s.repo.GetByUser(userID)
+}
+
+func (s *URLService) DeleteUserURLs(userID string, ids []string) error {
+	return s.repo.MarkURLsDeleted(userID, ids)
 }

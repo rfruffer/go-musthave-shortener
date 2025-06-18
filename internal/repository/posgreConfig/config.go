@@ -26,7 +26,8 @@ func InitDB(dsn string) (*pgxpool.Pool, error) {
 	CREATE TABLE IF NOT EXISTS short_urls (
 		short_id TEXT PRIMARY KEY,
 		original_url TEXT NOT NULL,
-		user_uuid UUID NOT NULL
+		user_uuid UUID NOT NULL,
+		is_deleted BOOLEAN DEFAULT false
 	);
 	`
 	_, err = pool.Exec(context.Background(), createTable)

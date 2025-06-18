@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rfruffer/go-musthave-shortener/internal/async"
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
@@ -141,6 +142,30 @@ func (us *URLHandler) Batch(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(http.StatusCreated)
 	json.NewEncoder(c.Writer).Encode(resp)
+}
+
+func (us *URLHandler) BatchDeleteHandler(c *gin.Context) {
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
+	userID := userIDRaw.(string)
+
+	var ids []string
+	if err := c.ShouldBindJSON(&ids); err != nil || len(ids) == 0 {
+		c.String(http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	task := async.DeleteTask{
+		UserID:    userID,
+		ShortURLs: ids,
+	}
+
+	async.DeleteQueue <- task
+
+	c.Writer.WriteHeader(http.StatusAccepted)
 }
 
 func (us *URLHandler) GetUserURLs(c *gin.Context) {
