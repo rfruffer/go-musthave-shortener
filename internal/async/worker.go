@@ -14,7 +14,7 @@ type DeleteTask struct {
 
 var DeleteQueue = make(chan DeleteTask, 100)
 
-func fanIn(doneCh chan struct{}, resultChs ...chan DeleteTask) chan DeleteTask {
+func FanIn(doneCh chan struct{}, resultChs ...chan DeleteTask) chan DeleteTask {
 	finalCh := make(chan DeleteTask)
 
 	var wg sync.WaitGroup

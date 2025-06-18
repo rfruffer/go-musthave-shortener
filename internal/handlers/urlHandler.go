@@ -16,8 +16,9 @@ import (
 )
 
 type URLHandler struct {
-	service *services.URLService
-	baseURL string
+	service    *services.URLService
+	baseURL    string
+	DeleteChan chan async.DeleteTask
 }
 
 func NewURLHandler(service *services.URLService, baseURL string) *URLHandler {
@@ -167,7 +168,8 @@ func (us *URLHandler) BatchDeleteHandler(c *gin.Context) {
 		ShortURLs: ids,
 	}
 
-	async.DeleteQueue <- task
+	// async.DeleteQueue <- task
+	us.DeleteChan <- task
 
 	c.Writer.WriteHeader(http.StatusAccepted)
 }

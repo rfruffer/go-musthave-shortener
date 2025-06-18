@@ -36,7 +36,11 @@ func main() {
 		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost)
 
 		doneCh := make(chan struct{})
-		async.StartDeleteWorker(doneCh, repo, async.DeleteQueue)
+		queue1 := make(chan async.DeleteTask)
+
+		merged := async.FanIn(doneCh, queue1)
+		async.StartDeleteWorker(doneCh, repo, merged)
+		shortURLHandler.DeleteChan = queue1
 
 	default:
 		repo = repository.NewInFileStore()
