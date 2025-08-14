@@ -28,7 +28,10 @@ func ExampleURLHandler_CreateShortJSONURLHandler() {
 
 	// Отправляем POST-запрос
 	reqBody := `{"url":"https://practicum.yandex.ru"}`
-	resp, _ := http.Post(server.URL+"/api/shorten", "application/json", strings.NewReader(reqBody))
+	resp, err := http.Post(server.URL+"/api/shorten", "application/json", strings.NewReader(reqBody))
+	if err != nil {
+		panic(err)
+	}
 
 	defer resp.Body.Close()
 

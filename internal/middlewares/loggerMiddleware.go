@@ -14,10 +14,12 @@ type responseData struct {
 	size   int
 }
 
+// InitLogger иниализирует функцию logger
 func InitLogger(logger *zap.SugaredLogger) {
 	sugar = *logger
 }
 
+// GinLoggingMiddleware реализовывает логирование запросов
 func GinLoggingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()

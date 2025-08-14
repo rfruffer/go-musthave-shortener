@@ -26,6 +26,7 @@ func validateCookie(userID, signature, secretKey string) bool {
 	return hmac.Equal([]byte(signUserID(userID, secretKey)), []byte(signature))
 }
 
+// AuthMiddleware предоставляет аутентификацию пользователей через куки
 func AuthMiddleware(secretKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookie, err := c.Request.Cookie(cookieName)

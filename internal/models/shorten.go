@@ -1,5 +1,6 @@
 package models
 
+// Переменные модели URL
 type (
 	ShortenRequest struct {
 		URL string `json:"url"`
