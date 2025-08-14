@@ -15,16 +15,19 @@ import (
 	"github.com/rfruffer/go-musthave-shortener/internal/services"
 )
 
+// URLHandler предоставляет методы для работы с сокращёнными URL.
 type URLHandler struct {
 	service    *services.URLService
 	baseURL    string
 	DeleteChan chan async.DeleteTask
 }
 
+// NewURLHandler создаёт новый URLHandler.
 func NewURLHandler(service *services.URLService, baseURL string) *URLHandler {
 	return &URLHandler{service: service, baseURL: baseURL}
 }
 
+// CreateShortJSONURLHandler обрабатывает POST-запрос и создаёт короткую ссылку в формате JSON.
 func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 	var req models.ShortenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -55,6 +58,7 @@ func (us *URLHandler) CreateShortJSONURLHandler(c *gin.Context) {
 	json.NewEncoder(c.Writer).Encode(resp)
 }
 
+// CreateShortURLHandler обрабатывает POST-запрос и создаёт короткую ссылку.
 func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
 	var reader io.Reader = c.Request.Body
 	if c.Request.Header.Get("Content-Encoding") == "gzip" {
@@ -91,6 +95,7 @@ func (us *URLHandler) CreateShortURLHandler(c *gin.Context) {
 	c.Data(http.StatusCreated, "text/plain", []byte(shortURL))
 }
 
+// GetShortURLHandler обрабатывает GET-запрос и редиректит на первоначальную ссылку.
 func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -110,10 +115,12 @@ func (us *URLHandler) GetShortURLHandler(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, originalURL)
 }
 
+// SetResultHost устанавливает адрес хоста.
 func (us *URLHandler) SetResultHost(host string) {
 	us.baseURL = host
 }
 
+// Ping проверяет подключение к базе.
 func (us *URLHandler) Ping(c *gin.Context) {
 	if err := us.service.Ping(); err != nil {
 		c.String(http.StatusInternalServerError, "Internal Server Error")
@@ -122,6 +129,7 @@ func (us *URLHandler) Ping(c *gin.Context) {
 	c.Writer.WriteHeader(http.StatusOK)
 }
 
+// Batch обрабатывает POST-запрос на пакетную генерацию коротких ссылок.
 func (us *URLHandler) Batch(c *gin.Context) {
 	var req []models.BatchOriginalURL
 	if err := c.ShouldBindJSON(&req); err != nil || len(req) == 0 {
@@ -149,6 +157,7 @@ func (us *URLHandler) Batch(c *gin.Context) {
 	json.NewEncoder(c.Writer).Encode(resp)
 }
 
+// Batch обрабатывает DELETE-запрос на пакетное удаление.
 func (us *URLHandler) BatchDeleteHandler(c *gin.Context) {
 	userIDRaw, exists := c.Get("user_id")
 	if !exists {
@@ -174,6 +183,7 @@ func (us *URLHandler) BatchDeleteHandler(c *gin.Context) {
 	c.Writer.WriteHeader(http.StatusAccepted)
 }
 
+// Batch обрабатывает GET-запрос и возращает все сокращенные ссылки по user_id.
 func (us *URLHandler) GetUserURLs(c *gin.Context) {
 	userIDRaw, exists := c.Get("user_id")
 	if !exists {

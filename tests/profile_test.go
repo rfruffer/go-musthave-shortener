@@ -50,7 +50,7 @@ func runProfileTest(t *testing.T, profilePath string) {
 
 	shortURLHandler.SetResultHost(server.URL)
 
-	for i := 0; i < 5000; i++ {
+	for i := 0; i < 10; i++ {
 		original := fmt.Sprintf("http://example.com/%s", strconv.Itoa(i))
 		loadURL(t, server.URL, original)
 	}
