@@ -7,13 +7,16 @@ import (
 	"github.com/rfruffer/go-musthave-shortener/internal/repository"
 )
 
+// DeleteTask предоставляет переменные для очереди.
 type DeleteTask struct {
 	UserID    string
 	ShortURLs []string
 }
 
+// DeleteQueue очередь на удаление
 var DeleteQueue = make(chan DeleteTask, 100)
 
+// FanIn метод удаления задач из очереди
 func FanIn(doneCh chan struct{}, resultChs ...chan DeleteTask) chan DeleteTask {
 	finalCh := make(chan DeleteTask)
 
@@ -45,6 +48,7 @@ func FanIn(doneCh chan struct{}, resultChs ...chan DeleteTask) chan DeleteTask {
 	return finalCh
 }
 
+// StartDeleteWorker воркер на удаление задач
 func StartDeleteWorker(doneCh chan struct{}, repo repository.StoreRepositoryInterface, inputCh chan DeleteTask) {
 	go func() {
 		for {

@@ -9,11 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// Router предоставляет методы для работы с handlers.
 type Router struct {
 	URLHandler *handlers.URLHandler
 	SecretKey  string
 }
 
+// SetupRouter устанавливает маршруты для handlers.
 func SetupRouter(rt Router) http.Handler {
 	logger, err := zap.NewProduction()
 	if err != nil {

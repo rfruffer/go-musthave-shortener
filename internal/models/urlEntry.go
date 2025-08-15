@@ -1,5 +1,6 @@
 package models
 
+// Переменные модели URL
 type URLEntry struct {
 	UUID        string `json:"uuid" db:"uuid"`
 	ShortURL    string `json:"short_url" db:"short_url"`

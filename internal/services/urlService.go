@@ -16,14 +16,17 @@ import (
 
 var shortSize = 8
 
+// URLService подключает интерфейс StoreRepositoryInterface
 type URLService struct {
 	repo repository.StoreRepositoryInterface
 }
 
+// NewURLService создает новый URLService
 func NewURLService(repo repository.StoreRepositoryInterface) *URLService {
 	return &URLService{repo: repo}
 }
 
+// GenerateShortURL функция генерации короткиз ссылок
 func (s *URLService) GenerateShortURL(originalURL string, uuid string) (string, error) {
 	b := make([]byte, shortSize)
 	_, err := rand.Read(b)
@@ -49,6 +52,7 @@ func (s *URLService) GenerateShortURL(originalURL string, uuid string) (string, 
 	return id, nil
 }
 
+// RedirectURL производит редирект на указанный адрес
 func (s *URLService) RedirectURL(id string) (string, error) {
 	URL, err := s.repo.GetURLByShort(id)
 	if err != nil {
@@ -60,10 +64,12 @@ func (s *URLService) RedirectURL(id string) (string, error) {
 	return URL.OriginalURL, nil
 }
 
+// Ping проверка подключения к базе
 func (s *URLService) Ping() error {
 	return s.repo.Ping()
 }
 
+// GenerateBatchShortURLs генерация коротких урл при пакетной загрузке
 func (s *URLService) GenerateBatchShortURLs(req []models.BatchOriginalURL, userID string) ([]models.BatchShortURL, error) {
 	resp := make([]models.BatchShortURL, 0, len(req))
 
@@ -80,10 +86,12 @@ func (s *URLService) GenerateBatchShortURLs(req []models.BatchOriginalURL, userI
 	return resp, nil
 }
 
+// GetURLsByUser получить все ссылки загруженные пользователем
 func (s *URLService) GetURLsByUser(userID string) ([]models.URLEntry, error) {
 	return s.repo.GetByUser(userID)
 }
 
+// DeleteUserURLs удалить ссылки пользователя
 func (s *URLService) DeleteUserURLs(userID string, ids []string) error {
 	return s.repo.MarkURLsDeleted(userID, ids)
 }

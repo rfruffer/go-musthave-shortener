@@ -2,6 +2,7 @@ package repository
 
 import "github.com/rfruffer/go-musthave-shortener/internal/models"
 
+// StoreRepositoryInterface представляет методы для взаимодействия с хранилищем
 type StoreRepositoryInterface interface {
 	Save(shortID string, originalURL string, uuid string) error
 	GetURLByShort(shortID string) (models.URLEntry, error)

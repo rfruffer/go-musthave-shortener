@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+// InitDB инициализует базу данных
 func InitDB(dsn string) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
@@ -49,6 +50,7 @@ func InitDB(dsn string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+// CloseDB закрывает подключение
 func CloseDB(pool *pgxpool.Pool) {
 	if pool == nil {
 		log.Println("No database connection to close")
