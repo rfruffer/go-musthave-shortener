@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// Config предоставляет переменные для конфигурации сервисов.
 type Config struct {
 	StartHost  string
 	ResultHost string
@@ -14,6 +15,7 @@ type Config struct {
 	SecretKey  string
 }
 
+// ParseFlags устанавливает пути
 func ParseFlags() *Config {
 	startHost := flag.String("a", "0.0.0.0:8080", "address and port to run server")
 	resultHost := flag.String("b", "http://localhost:8080", "base URL for shortened links")

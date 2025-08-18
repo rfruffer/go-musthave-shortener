@@ -10,15 +10,18 @@ import (
 	"github.com/rfruffer/go-musthave-shortener/internal/models"
 )
 
+// URLHandler предоставляет методы для работы с файлами.
 type InFileStore struct {
 	mu    sync.RWMutex
 	store map[string]models.URLEntry
 }
 
+// NewInFileStore создает новый InFileStore
 func NewInFileStore() *InFileStore {
 	return &InFileStore{store: make(map[string]models.URLEntry)}
 }
 
+// Save сохраняет файл
 func (s *InFileStore) Save(shortID, originalURL, uuid string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -26,6 +29,7 @@ func (s *InFileStore) Save(shortID, originalURL, uuid string) error {
 	return nil
 }
 
+// GetURLByShort получить URL по короткой ссылке
 func (s *InFileStore) GetURLByShort(shortID string) (models.URLEntry, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -36,6 +40,7 @@ func (s *InFileStore) GetURLByShort(shortID string) (models.URLEntry, error) {
 	return entry, nil
 }
 
+// SaveToFile сохраняет файл
 func (s *InFileStore) SaveToFile(path string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -53,6 +58,7 @@ func (s *InFileStore) SaveToFile(path string) error {
 	return nil
 }
 
+// LoadFromFile загрузить из файла
 func (s *InFileStore) LoadFromFile(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
@@ -74,18 +80,22 @@ func (s *InFileStore) LoadFromFile(path string) error {
 	return scanner.Err()
 }
 
+// Ping заглушка из интерфейса
 func (s *InFileStore) Ping() error {
 	return nil
 }
 
+// Ping заглушка из интерфейса
 func (s *InFileStore) GetShortIDByOriginalURL(originalURL string) (string, error) {
 	return "", nil
 }
 
+// Ping заглушка из интерфейса
 func (s *InFileStore) GetByUser(userID string) ([]models.URLEntry, error) {
 	return []models.URLEntry{}, nil
 }
 
+// Ping заглушка из интерфейса
 func (s *InFileStore) MarkURLsDeleted(userID string, ids []string) error {
 	return nil
 }

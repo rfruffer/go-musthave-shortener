@@ -14,10 +14,12 @@ type gzipWriter struct {
 	writer io.Writer
 }
 
+// Write метод записи
 func (g *gzipWriter) Write(data []byte) (int, error) {
 	return g.writer.Write(data)
 }
 
+// GinGzipMiddleware реализовывает функцию сжатия
 func GinGzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if strings.Contains(c.GetHeader("Content-Encoding"), "gzip") {
