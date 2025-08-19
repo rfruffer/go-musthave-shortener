@@ -1,3 +1,4 @@
+// Package middlewares содержит middleware (аутентификация, логирование, сжатие).
 package middlewares
 
 import (

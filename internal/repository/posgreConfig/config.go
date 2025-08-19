@@ -1,3 +1,4 @@
+// Package posgreconfig инициализирует подключение к PostgreSQL и схему БД.
 package posgreconfig
 
 import (

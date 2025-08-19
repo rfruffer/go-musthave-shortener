@@ -1,3 +1,4 @@
+// Package repository предоставляет абстракции и реализации хранилищ (Postgres, файл).
 package repository
 
 import (

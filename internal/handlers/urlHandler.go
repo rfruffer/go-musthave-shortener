@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-хендлеры для работы с API сервиса.
 package handlers
 
 import (
