@@ -8,6 +8,8 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// OsExitInMainAnalyzer запрещает прямой вызов os.Exit в функции main пакета main
+// внутри нашего проекта (папка /cmd/...), чтобы игнорировать синтетические main-пакеты go run.
 var OsExitInMainAnalyzer = &analysis.Analyzer{
 	Name: "noosexitinmain",
 	Doc:  "Запрещает прямой вызов os.Exit в функции main пакета main (только внутри проекта, под /cmd/)",
