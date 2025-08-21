@@ -1,3 +1,4 @@
+// Package config парсит конфигурацию из флагов и переменных окружения.
 package config
 
 import (

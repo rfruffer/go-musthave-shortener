@@ -1,3 +1,4 @@
+// Package services реализует бизнес-логику сервиса сокращения URL.
 package services
 
 import (
