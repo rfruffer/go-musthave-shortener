@@ -88,9 +88,16 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("starting server on %s", cfg.StartHost)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("error starting server: %v", err)
+		if cfg.EnableHTTPS {
+			log.Printf("starting HTTPS server on %s", cfg.StartHost)
+			if err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("error starting HTTPS server: %v", err)
+			}
+		} else {
+			log.Printf("starting HTTP server on %s", cfg.StartHost)
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("error starting HTTP server: %v", err)
+			}
 		}
 	}()
 
