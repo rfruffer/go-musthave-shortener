@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/rfruffer/go-musthave-shortener/cmd/shortener/router"
 	"github.com/rfruffer/go-musthave-shortener/config"
@@ -85,7 +87,7 @@ func main() {
 	}
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
 		if cfg.EnableHTTPS {
@@ -104,12 +106,36 @@ func main() {
 	<-stop
 	log.Println("shutting down server...")
 
-	if err := server.Close(); err != nil {
-		log.Printf("error shutting down server: %v", err)
+	// Создаем context с timeout для graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Закрываем асинхронные воркеры если они есть
+	switch cfg.Storage {
+	case "postgres":
+		if shortURLHandler.DeleteChan != nil {
+			log.Println("closing delete workers...")
+			close(shortURLHandler.DeleteChan)
+		}
 	}
 
+	// Graceful shutdown сервера - ждем завершения всех активных запросов
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("error during server shutdown: %v", err)
+		// Если graceful shutdown не удался, принудительно закрываем
+		if closeErr := server.Close(); closeErr != nil {
+			log.Printf("error force closing server: %v", closeErr)
+		}
+	} else {
+		log.Println("all active requests completed")
+	}
+
+	// Сохраняем все несохраненные данные
+	log.Println("saving data to storage...")
 	if err := repo.SaveToFile(cfg.FilePath); err != nil {
 		log.Printf("failed to save to file: %v", err)
+	} else {
+		log.Println("data saved successfully")
 	}
 
 	log.Println("server stopped gracefully")
