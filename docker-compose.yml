@@ -15,6 +15,7 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=workdb
       # - ENABLE_HTTPS=true
+      - CONFIG=/app/config.json
     ports:
       - "8080:8080"
     depends_on:
