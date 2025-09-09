@@ -91,7 +91,7 @@ func main() {
 	defer stop()
 
 	serverErr := make(chan error, 1)
-	
+
 	go func() {
 		if cfg.EnableHTTPS {
 			log.Printf("starting HTTPS server on %s", cfg.StartHost)
