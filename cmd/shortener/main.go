@@ -86,28 +86,38 @@ func main() {
 		Handler: r,
 	}
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	// Создаем контекст, который отменяется при получении сигнала завершения
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
 
+	serverErr := make(chan error, 1)
+	
 	go func() {
 		if cfg.EnableHTTPS {
 			log.Printf("starting HTTPS server on %s", cfg.StartHost)
 			if err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("error starting HTTPS server: %v", err)
+				serverErr <- fmt.Errorf("HTTPS server error: %w", err)
+				return
 			}
 		} else {
 			log.Printf("starting HTTP server on %s", cfg.StartHost)
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("error starting HTTP server: %v", err)
+				serverErr <- fmt.Errorf("HTTP server error: %w", err)
+				return
 			}
 		}
 	}()
 
-	<-stop
-	log.Println("shutting down server...")
+	// Ждем либо сигнал завершения, либо ошибку сервера
+	select {
+	case err := <-serverErr:
+		log.Printf("server failed to start: %v", err)
+	case <-ctx.Done():
+		log.Println("shutting down server...")
+	}
 
 	// Создаем context с timeout для graceful shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Закрываем асинхронные воркеры если они есть
@@ -120,12 +130,8 @@ func main() {
 	}
 
 	// Graceful shutdown сервера - ждем завершения всех активных запросов
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("error during server shutdown: %v", err)
-		// Если graceful shutdown не удался, принудительно закрываем
-		if closeErr := server.Close(); closeErr != nil {
-			log.Printf("error force closing server: %v", closeErr)
-		}
 	} else {
 		log.Println("all active requests completed")
 	}

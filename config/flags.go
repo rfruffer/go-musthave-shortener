@@ -59,8 +59,8 @@ func ParseFlags() *Config {
 	keyFile := flag.String("key", "./certs/key.pem", "path to TLS private keyfile")
 	configPath := flag.String("c", "", "path to JSON config file")
 	_ = flag.String("config", "", "path to JSON config file (alias for -c)")
-	secretKey := os.Getenv("SECRET_KEY")
-	if secretKey == "" {
+	secretKey, exists := os.LookupEnv("SECRET_KEY")
+	if !exists {
 		secretKey = "verysecretkey"
 	}
 
@@ -72,7 +72,7 @@ func ParseFlags() *Config {
 	}
 
 	// Проверяем переменную окружения CONFIG
-	if envConfigPath := os.Getenv("CONFIG"); envConfigPath != "" && *configPath == "" {
+	if envConfigPath, exists := os.LookupEnv("CONFIG"); exists && envConfigPath != "" && *configPath == "" {
 		*configPath = envConfigPath
 	}
 
@@ -102,25 +102,25 @@ func ParseFlags() *Config {
 		*enableHTTPS = *jsonConfig.EnableHTTPS
 	}
 
-	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
+	if envRunAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		*startHost = envRunAddr
 	}
-	if envResultHost := os.Getenv("BASE_URL"); envResultHost != "" {
+	if envResultHost, exists := os.LookupEnv("BASE_URL"); exists {
 		*resultHost = envResultHost
 	}
-	if envFilePath := os.Getenv("FILE_STORAGE_PATH"); envFilePath != "" {
+	if envFilePath, exists := os.LookupEnv("FILE_STORAGE_PATH"); exists {
 		*filePath = envFilePath
 	}
-	if envDB := os.Getenv("DATABASE_DSN"); envDB != "" {
+	if envDB, exists := os.LookupEnv("DATABASE_DSN"); exists {
 		*dbDSN = envDB
 	}
-	if os.Getenv("ENABLE_HTTPS") == "true" {
+	if envHTTPS, exists := os.LookupEnv("ENABLE_HTTPS"); exists && envHTTPS == "true" {
 		*enableHTTPS = true
 	}
-	if envCertFile := os.Getenv("CERT_FILE"); envCertFile != "" {
+	if envCertFile, exists := os.LookupEnv("CERT_FILE"); exists {
 		*certFile = envCertFile
 	}
-	if envKeyFile := os.Getenv("KEY_FILE"); envKeyFile != "" {
+	if envKeyFile, exists := os.LookupEnv("KEY_FILE"); exists {
 		*keyFile = envKeyFile
 	}
 
