@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/rfruffer/go-musthave-shortener/cmd/shortener/router"
 	"github.com/rfruffer/go-musthave-shortener/config"
@@ -84,25 +86,62 @@ func main() {
 		Handler: r,
 	}
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	// Создаем контекст, который отменяется при получении сигнала завершения
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
+	serverErr := make(chan error, 1)
 
 	go func() {
-		log.Printf("starting server on %s", cfg.StartHost)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("error starting server: %v", err)
+		if cfg.EnableHTTPS {
+			log.Printf("starting HTTPS server on %s", cfg.StartHost)
+			if err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile); err != nil && err != http.ErrServerClosed {
+				serverErr <- fmt.Errorf("HTTPS server error: %w", err)
+				return
+			}
+		} else {
+			log.Printf("starting HTTP server on %s", cfg.StartHost)
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				serverErr <- fmt.Errorf("HTTP server error: %w", err)
+				return
+			}
 		}
 	}()
 
-	<-stop
-	log.Println("shutting down server...")
-
-	if err := server.Close(); err != nil {
-		log.Printf("error shutting down server: %v", err)
+	// Ждем либо сигнал завершения, либо ошибку сервера
+	select {
+	case err := <-serverErr:
+		log.Printf("server failed to start: %v", err)
+	case <-ctx.Done():
+		log.Println("shutting down server...")
 	}
 
+	// Создаем context с timeout для graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Закрываем асинхронные воркеры если они есть
+	switch cfg.Storage {
+	case "postgres":
+		if shortURLHandler.DeleteChan != nil {
+			log.Println("closing delete workers...")
+			close(shortURLHandler.DeleteChan)
+		}
+	}
+
+	// Graceful shutdown сервера - ждем завершения всех активных запросов
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("error during server shutdown: %v", err)
+	} else {
+		log.Println("all active requests completed")
+	}
+
+	// Сохраняем все несохраненные данные
+	log.Println("saving data to storage...")
 	if err := repo.SaveToFile(cfg.FilePath); err != nil {
 		log.Printf("failed to save to file: %v", err)
+	} else {
+		log.Println("data saved successfully")
 	}
 
 	log.Println("server stopped gracefully")
