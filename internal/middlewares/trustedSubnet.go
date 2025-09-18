@@ -14,13 +14,13 @@ func TrustedSubnetMiddleware(trustedSubnet string) gin.HandlerFunc {
 		if realIP == "" {
 			realIP = c.ClientIP()
 		}
-		
+
 		allowed, err := utils.IsIPInTrustedSubnet(realIP, trustedSubnet)
 		if err != nil || !allowed {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
-		
+
 		c.Next()
 	}
 }

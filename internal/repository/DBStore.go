@@ -114,16 +114,16 @@ func (d *DBStore) MarkURLsDeleted(userID string, ids []string) error {
 func (d *DBStore) GetStats() (urlCount int, userCount int, err error) {
 	const urlQuery = `SELECT COUNT(*) FROM short_urls`
 	const userQuery = `SELECT COUNT(DISTINCT user_uuid) FROM short_urls`
-	
+
 	err = d.db.QueryRow(context.Background(), urlQuery).Scan(&urlCount)
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	err = d.db.QueryRow(context.Background(), userQuery).Scan(&userCount)
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	return urlCount, userCount, nil
 }

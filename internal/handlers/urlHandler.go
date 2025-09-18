@@ -221,11 +221,11 @@ func (us *URLHandler) GetStats(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to get stats")
 		return
 	}
-	
+
 	resp := models.StatsResponse{
 		URLs:  urlCount,
 		Users: userCount,
 	}
-	
+
 	c.JSON(http.StatusOK, resp)
 }

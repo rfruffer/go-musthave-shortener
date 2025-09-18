@@ -104,16 +104,16 @@ func (s *InFileStore) MarkURLsDeleted(userID string, ids []string) error {
 func (s *InFileStore) GetStats() (urlCount int, userCount int, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	urlCount = len(s.store)
 	userSet := make(map[string]struct{})
-	
+
 	for _, entry := range s.store {
 		if entry.UUID != "" {
 			userSet[entry.UUID] = struct{}{}
 		}
 	}
-	
+
 	userCount = len(userSet)
 	return urlCount, userCount, nil
 }
