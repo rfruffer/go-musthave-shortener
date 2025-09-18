@@ -77,8 +77,9 @@ func main() {
 	}
 
 	r := router.SetupRouter(router.Router{
-		URLHandler: shortURLHandler,
-		SecretKey:  cfg.SecretKey,
+		URLHandler:    shortURLHandler,
+		SecretKey:     cfg.SecretKey,
+		TrustedSubnet: cfg.TrustedSubnet,
 	})
 
 	server := &http.Server{

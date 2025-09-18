@@ -14,19 +14,21 @@ type JSONConfig struct {
 	FileStoragePath string `json:"file_storage_path,omitempty"`
 	DatabaseDSN     string `json:"database_dsn,omitempty"`
 	EnableHTTPS     *bool  `json:"enable_https,omitempty"`
+	TrustedSubnet   string `json:"trusted_subnet,omitempty"`
 }
 
 // Config предоставляет переменные для конфигурации сервисов.
 type Config struct {
-	StartHost   string
-	ResultHost  string
-	FilePath    string
-	DBDSN       string
-	Storage     string
-	SecretKey   string
-	EnableHTTPS bool
-	CertFile    string
-	KeyFile     string
+	StartHost     string
+	ResultHost    string
+	FilePath      string
+	DBDSN         string
+	Storage       string
+	SecretKey     string
+	EnableHTTPS   bool
+	CertFile      string
+	KeyFile       string
+	TrustedSubnet string
 }
 
 // loadJSONConfig загружает конфигурацию из JSON файла
@@ -57,6 +59,7 @@ func ParseFlags() *Config {
 	enableHTTPS := flag.Bool("s", false, "enable HTTPS")
 	certFile := flag.String("cert", "./certs/cert.pem", "path to TLS certificatefile")
 	keyFile := flag.String("key", "./certs/key.pem", "path to TLS private keyfile")
+	trustedSubnet := flag.String("t", "", "trusted subnet in CIDR format")
 	configPath := flag.String("c", "", "path to JSON config file")
 	_ = flag.String("config", "", "path to JSON config file (alias for -c)")
 	secretKey, exists := os.LookupEnv("SECRET_KEY")
@@ -101,6 +104,9 @@ func ParseFlags() *Config {
 	if jsonConfig.EnableHTTPS != nil && !*enableHTTPS {
 		*enableHTTPS = *jsonConfig.EnableHTTPS
 	}
+	if jsonConfig.TrustedSubnet != "" && *trustedSubnet == "" {
+		*trustedSubnet = jsonConfig.TrustedSubnet
+	}
 
 	if envRunAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		*startHost = envRunAddr
@@ -123,6 +129,9 @@ func ParseFlags() *Config {
 	if envKeyFile, exists := os.LookupEnv("KEY_FILE"); exists {
 		*keyFile = envKeyFile
 	}
+	if envTrustedSubnet, exists := os.LookupEnv("TRUSTED_SUBNET"); exists {
+		*trustedSubnet = envTrustedSubnet
+	}
 
 	storage := ""
 	if *dbDSN != "" {
@@ -130,14 +139,15 @@ func ParseFlags() *Config {
 	}
 
 	return &Config{
-		StartHost:   *startHost,
-		ResultHost:  *resultHost,
-		FilePath:    *filePath,
-		DBDSN:       *dbDSN,
-		Storage:     storage,
-		SecretKey:   secretKey,
-		EnableHTTPS: *enableHTTPS,
-		CertFile:    *certFile,
-		KeyFile:     *keyFile,
+		StartHost:     *startHost,
+		ResultHost:    *resultHost,
+		FilePath:      *filePath,
+		DBDSN:         *dbDSN,
+		Storage:       storage,
+		SecretKey:     secretKey,
+		EnableHTTPS:   *enableHTTPS,
+		CertFile:      *certFile,
+		KeyFile:       *keyFile,
+		TrustedSubnet: *trustedSubnet,
 	}
 }

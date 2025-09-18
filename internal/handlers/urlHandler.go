@@ -213,3 +213,19 @@ func (us *URLHandler) GetUserURLs(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+// GetStats обрабатывает GET-запрос для получения статистики
+func (us *URLHandler) GetStats(c *gin.Context) {
+	urlCount, userCount, err := us.service.GetStats()
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to get stats")
+		return
+	}
+	
+	resp := models.StatsResponse{
+		URLs:  urlCount,
+		Users: userCount,
+	}
+	
+	c.JSON(http.StatusOK, resp)
+}

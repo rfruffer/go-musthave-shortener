@@ -179,3 +179,85 @@ func TestUrlHandler_ShortUrlHandler(t *testing.T) {
 		})
 	}
 }
+
+func TestUrlHandler_StatsHandler(t *testing.T) {
+	repo := repository.NewInFileStore()
+	service := services.NewURLService(repo)
+	shortURLHandler := handlers.NewURLHandler(service, "http://localhost:8080")
+
+	// Добавляем тестовые данные
+	err := repo.Save("test1", "https://example.com", "user1")
+	require.NoError(t, err)
+	err = repo.Save("test2", "https://google.com", "user2")
+	require.NoError(t, err)
+	err = repo.Save("test3", "https://yandex.ru", "user1")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		trustedSubnet string
+		realIP        string
+		expectedCode  int
+		expectedURLs  int
+		expectedUsers int
+	}{
+		{
+			name:          "Forbidden - empty trusted subnet",
+			trustedSubnet: "",
+			expectedCode:  http.StatusForbidden,
+		},
+		{
+			name:          "Forbidden - IP not in trusted subnet",
+			trustedSubnet: "192.168.1.0/24",
+			expectedCode:  http.StatusForbidden,
+		},
+		{
+			name:          "Success - IP in trusted subnet",
+			trustedSubnet: "127.0.0.0/8",
+			expectedCode:  http.StatusOK,
+			expectedURLs:  3,
+			expectedUsers: 2,
+		},
+		{
+			name:          "Success - X-Real-IP in trusted subnet",
+			trustedSubnet: "10.0.0.0/8",
+			realIP:        "10.0.0.5",
+			expectedCode:  http.StatusOK,
+			expectedURLs:  3,
+			expectedUsers: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := router.SetupRouter(router.Router{
+				URLHandler:    shortURLHandler,
+				SecretKey:     "test-secret",
+				TrustedSubnet: tt.trustedSubnet,
+			})
+
+			server := httptest.NewServer(router)
+			defer server.Close()
+
+			client := resty.NewWithClient(&http.Client{})
+			request := client.R()
+
+			if tt.realIP != "" {
+				request.SetHeader("X-Real-IP", tt.realIP)
+			}
+
+			resp, err := request.Get(server.URL + "/api/internal/stats")
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expectedCode, resp.StatusCode())
+
+			if tt.expectedCode == http.StatusOK {
+				var statsResp models.StatsResponse
+				err := json.Unmarshal(resp.Body(), &statsResp)
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedURLs, statsResp.URLs)
+				assert.Equal(t, tt.expectedUsers, statsResp.Users)
+			}
+		})
+	}
+}

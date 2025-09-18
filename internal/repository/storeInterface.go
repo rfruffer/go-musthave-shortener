@@ -14,4 +14,5 @@ type StoreRepositoryInterface interface {
 	GetShortIDByOriginalURL(originalURL string) (string, error)
 	GetByUser(userID string) ([]models.URLEntry, error)
 	MarkURLsDeleted(userID string, ids []string) error
+	GetStats() (urlCount int, userCount int, err error)
 }

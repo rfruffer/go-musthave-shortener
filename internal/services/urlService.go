@@ -96,3 +96,8 @@ func (s *URLService) GetURLsByUser(userID string) ([]models.URLEntry, error) {
 func (s *URLService) DeleteUserURLs(userID string, ids []string) error {
 	return s.repo.MarkURLsDeleted(userID, ids)
 }
+
+// GetStats получить статистику сервиса
+func (s *URLService) GetStats() (urlCount int, userCount int, err error) {
+	return s.repo.GetStats()
+}
