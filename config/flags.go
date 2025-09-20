@@ -15,6 +15,7 @@ type JSONConfig struct {
 	DatabaseDSN     string `json:"database_dsn,omitempty"`
 	EnableHTTPS     *bool  `json:"enable_https,omitempty"`
 	TrustedSubnet   string `json:"trusted_subnet,omitempty"`
+	GRPCAddress     string `json:"grpc_address,omitempty"`
 }
 
 // Config предоставляет переменные для конфигурации сервисов.
@@ -29,6 +30,7 @@ type Config struct {
 	CertFile      string
 	KeyFile       string
 	TrustedSubnet string
+	GRPCAddress   string
 }
 
 // loadJSONConfig загружает конфигурацию из JSON файла
@@ -60,6 +62,7 @@ func ParseFlags() *Config {
 	certFile := flag.String("cert", "./certs/cert.pem", "path to TLS certificatefile")
 	keyFile := flag.String("key", "./certs/key.pem", "path to TLS private keyfile")
 	trustedSubnet := flag.String("t", "", "trusted subnet in CIDR format")
+	grpcAddress := flag.String("g", "0.0.0.0:3200", "address and port to run gRPC server")
 	configPath := flag.String("c", "", "path to JSON config file")
 	_ = flag.String("config", "", "path to JSON config file (alias for -c)")
 	secretKey, exists := os.LookupEnv("SECRET_KEY")
@@ -107,6 +110,9 @@ func ParseFlags() *Config {
 	if jsonConfig.TrustedSubnet != "" && *trustedSubnet == "" {
 		*trustedSubnet = jsonConfig.TrustedSubnet
 	}
+	if jsonConfig.GRPCAddress != "" && *grpcAddress == "0.0.0.0:3200" {
+		*grpcAddress = jsonConfig.GRPCAddress
+	}
 
 	if envRunAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		*startHost = envRunAddr
@@ -132,6 +138,9 @@ func ParseFlags() *Config {
 	if envTrustedSubnet, exists := os.LookupEnv("TRUSTED_SUBNET"); exists {
 		*trustedSubnet = envTrustedSubnet
 	}
+	if envGRPCAddress, exists := os.LookupEnv("GRPC_ADDRESS"); exists {
+		*grpcAddress = envGRPCAddress
+	}
 
 	storage := ""
 	if *dbDSN != "" {
@@ -149,5 +158,6 @@ func ParseFlags() *Config {
 		CertFile:      *certFile,
 		KeyFile:       *keyFile,
 		TrustedSubnet: *trustedSubnet,
+		GRPCAddress:   *grpcAddress,
 	}
 }
