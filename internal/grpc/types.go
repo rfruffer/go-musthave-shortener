@@ -3,20 +3,20 @@ package grpc
 
 // CreateShortURLRequest запрос для создания короткой ссылки
 type CreateShortURLRequest struct {
-	Url    string `json:"url"`
-	UserId string `json:"user_id"`
+	URL    string `json:"url"`
+	UserID string `json:"user_id"`
 }
 
 // CreateShortURLResponse ответ для создания короткой ссылки
 type CreateShortURLResponse struct {
-	ShortUrl      string `json:"short_url"`
+	ShortURL      string `json:"short_url"`
 	AlreadyExists bool   `json:"already_exists"`
 }
 
 // CreateShortJSONURLRequest запрос для создания короткой ссылки в JSON формате
 type CreateShortJSONURLRequest struct {
-	Url    string `json:"url"`
-	UserId string `json:"user_id"`
+	URL    string `json:"url"`
+	UserID string `json:"user_id"`
 }
 
 // CreateShortJSONURLResponse ответ для создания короткой ссылки в JSON формате
@@ -27,12 +27,12 @@ type CreateShortJSONURLResponse struct {
 
 // GetShortURLRequest запрос для получения оригинального URL
 type GetShortURLRequest struct {
-	Id string `json:"id"`
+	ID string `json:"id"`
 }
 
 // GetShortURLResponse ответ для получения оригинального URL
 type GetShortURLResponse struct {
-	OriginalUrl string `json:"original_url"`
+	OriginalURL string `json:"original_url"`
 	Deleted     bool   `json:"deleted"`
 }
 
@@ -46,20 +46,20 @@ type PingResponse struct {
 
 // BatchOriginalURL элемент пакетного запроса
 type BatchOriginalURL struct {
-	CorrelationId string `json:"correlation_id"`
-	OriginalUrl   string `json:"original_url"`
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
 }
 
 // BatchShortURL элемент пакетного ответа
 type BatchShortURL struct {
-	CorrelationId string `json:"correlation_id"`
-	ShortUrl      string `json:"short_url"`
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
 }
 
 // BatchRequest запрос для пакетного создания
 type BatchRequest struct {
 	Urls   []*BatchOriginalURL `json:"urls"`
-	UserId string              `json:"user_id"`
+	UserID string              `json:"user_id"`
 }
 
 // BatchResponse ответ для пакетного создания
@@ -69,13 +69,13 @@ type BatchResponse struct {
 
 // GetUserURLsRequest запрос для получения URL пользователя
 type GetUserURLsRequest struct {
-	UserId string `json:"user_id"`
+	UserID string `json:"user_id"`
 }
 
 // URLEntry URL пользователя
 type URLEntry struct {
-	ShortUrl    string `json:"short_url"`
-	OriginalUrl string `json:"original_url"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
 }
 
 // GetUserURLsResponse ответ для получения URL пользователя
@@ -86,7 +86,7 @@ type GetUserURLsResponse struct {
 // BatchDeleteRequest запрос для пакетного удаления
 type BatchDeleteRequest struct {
 	Ids    []string `json:"ids"`
-	UserId string   `json:"user_id"`
+	UserID string   `json:"user_id"`
 }
 
 // BatchDeleteResponse ответ для пакетного удаления

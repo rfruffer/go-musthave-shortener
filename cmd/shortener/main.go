@@ -72,7 +72,6 @@ func main() {
 	default:
 		repo = repository.NewInFileStore()
 		service = services.NewURLService(repo)
-		commonService = services.NewCommonURLService(service, cfg.ResultHost)
 		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost)
 	}
 
@@ -120,10 +119,8 @@ func main() {
 		log.Printf("Общий слой бизнес-логики создан и готов для использования")
 		
 		// В реальной реализации здесь был бы запуск настоящего gRPC сервера
-		select {
-		case <-ctx.Done():
-			return
-		}
+		<-ctx.Done()
+		return
 	}()
 
 	// Ждем либо сигнал завершения, либо ошибку сервера

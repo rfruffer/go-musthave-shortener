@@ -42,7 +42,7 @@ func bufDialer(context.Context, string) (net.Conn, error) {
 
 func TestGRPCCreateShortURL(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -52,8 +52,8 @@ func TestGRPCCreateShortURL(t *testing.T) {
 
 	// Тест создания короткой ссылки
 	req := &grpcServer.CreateShortURLRequest{
-		Url:    "https://example.com",
-		UserId: "test-user-123",
+		URL:    "https://example.com",
+		UserID: "test-user-123",
 	}
 
 	resp, err := client.CreateShortURL(ctx, req)
@@ -61,7 +61,7 @@ func TestGRPCCreateShortURL(t *testing.T) {
 		t.Fatalf("CreateShortURL failed: %v", err)
 	}
 
-	if resp.ShortUrl == "" {
+	if resp.ShortURL == "" {
 		t.Error("Expected non-empty short URL")
 	}
 
@@ -69,12 +69,12 @@ func TestGRPCCreateShortURL(t *testing.T) {
 		t.Error("Expected AlreadyExists to be false for new URL")
 	}
 
-	t.Logf("Created short URL: %s", resp.ShortUrl)
+	t.Logf("Created short URL: %s", resp.ShortURL)
 }
 
 func TestGRPCPing(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestGRPCPing(t *testing.T) {
 
 func TestGRPCBatch(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -109,15 +109,15 @@ func TestGRPCBatch(t *testing.T) {
 
 	// Тест пакетного создания
 	req := &grpcServer.BatchRequest{
-		UserId: "test-user-batch",
+		UserID: "test-user-batch",
 		Urls: []*grpcServer.BatchOriginalURL{
 			{
-				CorrelationId: "1",
-				OriginalUrl:   "https://example1.com",
+				CorrelationID: "1",
+				OriginalURL:   "https://example1.com",
 			},
 			{
-				CorrelationId: "2", 
-				OriginalUrl:   "https://example2.com",
+				CorrelationID: "2", 
+				OriginalURL:   "https://example2.com",
 			},
 		},
 	}
@@ -132,12 +132,12 @@ func TestGRPCBatch(t *testing.T) {
 	}
 
 	for i, url := range resp.Urls {
-		if url.ShortUrl == "" {
+		if url.ShortURL == "" {
 			t.Errorf("Expected non-empty short URL for item %d", i)
 		}
-		if url.CorrelationId == "" {
+		if url.CorrelationID == "" {
 			t.Errorf("Expected non-empty correlation ID for item %d", i)
 		}
-		t.Logf("Batch item %d: %s -> %s", i, url.CorrelationId, url.ShortUrl)
+		t.Logf("Batch item %d: %s -> %s", i, url.CorrelationID, url.ShortURL)
 	}
 }
