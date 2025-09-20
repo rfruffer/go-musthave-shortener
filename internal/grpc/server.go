@@ -28,29 +28,29 @@ func NewURLShortenerServer(commonService *services.CommonURLService) *URLShorten
 
 // CreateShortURL создает короткую ссылку из обычного URL
 func (s *URLShortenerServer) CreateShortURL(ctx context.Context, req *CreateShortURLRequest) (*CreateShortURLResponse, error) {
-	if req.Url == "" {
+	if req.URL == "" {
 		return nil, status.Error(codes.InvalidArgument, "URL не может быть пустым")
 	}
 
-	shortURL, alreadyExists, err := s.commonService.CreateShortURL(req.Url, req.UserId)
+	shortURL, alreadyExists, err := s.commonService.CreateShortURL(req.URL, req.UserID)
 	if err != nil {
 		log.Printf("Ошибка создания короткой ссылки: %v", err)
 		return nil, status.Error(codes.Internal, "Ошибка создания короткой ссылки")
 	}
 
 	return &CreateShortURLResponse{
-		ShortUrl:      shortURL,
+		ShortURL:      shortURL,
 		AlreadyExists: alreadyExists,
 	}, nil
 }
 
 // CreateShortJSONURL создает короткую ссылку в формате JSON
 func (s *URLShortenerServer) CreateShortJSONURL(ctx context.Context, req *CreateShortJSONURLRequest) (*CreateShortJSONURLResponse, error) {
-	if req.Url == "" {
+	if req.URL == "" {
 		return nil, status.Error(codes.InvalidArgument, "URL не может быть пустым")
 	}
 
-	shortURL, alreadyExists, err := s.commonService.CreateShortURL(req.Url, req.UserId)
+	shortURL, alreadyExists, err := s.commonService.CreateShortURL(req.URL, req.UserID)
 	if err != nil {
 		log.Printf("Ошибка создания короткой ссылки: %v", err)
 		return nil, status.Error(codes.Internal, "Ошибка создания короткой ссылки")
@@ -64,11 +64,11 @@ func (s *URLShortenerServer) CreateShortJSONURL(ctx context.Context, req *Create
 
 // GetShortURL получает оригинальный URL по короткому ID
 func (s *URLShortenerServer) GetShortURL(ctx context.Context, req *GetShortURLRequest) (*GetShortURLResponse, error) {
-	if req.Id == "" {
+	if req.ID == "" {
 		return nil, status.Error(codes.InvalidArgument, "ID не может быть пустым")
 	}
 
-	originalURL, deleted, err := s.commonService.GetOriginalURL(req.Id)
+	originalURL, deleted, err := s.commonService.GetOriginalURL(req.ID)
 	if err != nil {
 		log.Printf("Ошибка получения URL: %v", err)
 		return nil, status.Error(codes.NotFound, "URL не найден")
@@ -79,7 +79,7 @@ func (s *URLShortenerServer) GetShortURL(ctx context.Context, req *GetShortURLRe
 	}
 
 	return &GetShortURLResponse{
-		OriginalUrl: originalURL,
+		OriginalURL: originalURL,
 		Deleted:     deleted,
 	}, nil
 }
@@ -105,12 +105,12 @@ func (s *URLShortenerServer) Batch(ctx context.Context, req *BatchRequest) (*Bat
 	modelRequests := make([]models.BatchOriginalURL, len(req.Urls))
 	for i, url := range req.Urls {
 		modelRequests[i] = models.BatchOriginalURL{
-			CorrelationID: url.CorrelationId,
-			OriginalURL:   url.OriginalUrl,
+			CorrelationID: url.CorrelationID,
+			OriginalURL:   url.OriginalURL,
 		}
 	}
 
-	results, err := s.commonService.BatchCreateShortURLs(modelRequests, req.UserId)
+	results, err := s.commonService.BatchCreateShortURLs(modelRequests, req.UserID)
 	if err != nil {
 		log.Printf("Ошибка пакетного создания URL: %v", err)
 		return nil, status.Error(codes.Internal, "Ошибка пакетного создания URL")
@@ -120,8 +120,8 @@ func (s *URLShortenerServer) Batch(ctx context.Context, req *BatchRequest) (*Bat
 	grpcResults := make([]*BatchShortURL, len(results))
 	for i, result := range results {
 		grpcResults[i] = &BatchShortURL{
-			CorrelationId: result.CorrelationID,
-			ShortUrl:      result.ShortURL,
+			CorrelationID: result.CorrelationID,
+			ShortURL:      result.ShortURL,
 		}
 	}
 
@@ -130,11 +130,11 @@ func (s *URLShortenerServer) Batch(ctx context.Context, req *BatchRequest) (*Bat
 
 // GetUserURLs получает все URL пользователя
 func (s *URLShortenerServer) GetUserURLs(ctx context.Context, req *GetUserURLsRequest) (*GetUserURLsResponse, error) {
-	if req.UserId == "" {
+	if req.UserID == "" {
 		return nil, status.Error(codes.InvalidArgument, "User ID не может быть пустым")
 	}
 
-	urls, err := s.commonService.GetUserURLs(req.UserId)
+	urls, err := s.commonService.GetUserURLs(req.UserID)
 	if err != nil {
 		log.Printf("Ошибка получения URL пользователя: %v", err)
 		return nil, status.Error(codes.Internal, "Ошибка получения URL пользователя")
@@ -144,8 +144,8 @@ func (s *URLShortenerServer) GetUserURLs(ctx context.Context, req *GetUserURLsRe
 	grpcURLs := make([]*URLEntry, len(urls))
 	for i, url := range urls {
 		grpcURLs[i] = &URLEntry{
-			ShortUrl:    url.ShortURL,
-			OriginalUrl: url.OriginalURL,
+			ShortURL:    url.ShortURL,
+			OriginalURL: url.OriginalURL,
 		}
 	}
 
@@ -154,7 +154,7 @@ func (s *URLShortenerServer) GetUserURLs(ctx context.Context, req *GetUserURLsRe
 
 // BatchDelete удаляет несколько URL пользователя
 func (s *URLShortenerServer) BatchDelete(ctx context.Context, req *BatchDeleteRequest) (*BatchDeleteResponse, error) {
-	if req.UserId == "" {
+	if req.UserID == "" {
 		return nil, status.Error(codes.InvalidArgument, "User ID не может быть пустым")
 	}
 
@@ -162,7 +162,7 @@ func (s *URLShortenerServer) BatchDelete(ctx context.Context, req *BatchDeleteRe
 		return nil, status.Error(codes.InvalidArgument, "Список ID не может быть пустым")
 	}
 
-	err := s.commonService.BatchDeleteURLs(req.UserId, req.Ids)
+	err := s.commonService.BatchDeleteURLs(req.UserID, req.Ids)
 	if err != nil {
 		log.Printf("Ошибка пакетного удаления URL: %v", err)
 		// Если канал удаления не настроен, возвращаем ошибку недоступности
