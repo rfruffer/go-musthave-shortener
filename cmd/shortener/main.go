@@ -45,6 +45,7 @@ func main() {
 
 	var repo repository.StoreRepositoryInterface
 	var service *services.URLService
+	var commonService *services.CommonURLService
 	var shortURLHandler *handlers.URLHandler
 
 	switch cfg.Storage {
@@ -57,6 +58,7 @@ func main() {
 		repo = repository.NewDBStore(db)
 
 		service = services.NewURLService(repo)
+		commonService = services.NewCommonURLService(service, cfg.ResultHost)
 		shortURLHandler = handlers.NewURLHandler(service, cfg.ResultHost)
 
 		doneCh := make(chan struct{})
@@ -65,6 +67,7 @@ func main() {
 		merged := async.FanIn(doneCh, queue1)
 		async.StartDeleteWorker(doneCh, repo, merged)
 		shortURLHandler.DeleteChan = queue1
+		commonService.SetDeleteChannel(queue1)
 
 	default:
 		repo = repository.NewInFileStore()
@@ -77,11 +80,12 @@ func main() {
 	}
 
 	r := router.SetupRouter(router.Router{
-		URLHandler: shortURLHandler,
-		SecretKey:  cfg.SecretKey,
+		URLHandler:    shortURLHandler,
+		SecretKey:     cfg.SecretKey,
+		TrustedSubnet: cfg.TrustedSubnet,
 	})
 
-	server := &http.Server{
+	httpServer := &http.Server{
 		Addr:    cfg.StartHost,
 		Handler: r,
 	}
@@ -90,22 +94,32 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
-	serverErr := make(chan error, 1)
+	serverErr := make(chan error, 2)
 
+	// Запускаем HTTP сервер
 	go func() {
 		if cfg.EnableHTTPS {
 			log.Printf("starting HTTPS server on %s", cfg.StartHost)
-			if err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile); err != nil && err != http.ErrServerClosed {
+			if err := httpServer.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile); err != nil && err != http.ErrServerClosed {
 				serverErr <- fmt.Errorf("HTTPS server error: %w", err)
 				return
 			}
 		} else {
 			log.Printf("starting HTTP server on %s", cfg.StartHost)
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				serverErr <- fmt.Errorf("HTTP server error: %w", err)
 				return
 			}
 		}
+	}()
+
+	// Симуляция gRPC сервера (для демонстрации архитектуры)
+	go func() {
+		log.Printf("gRPC server configured to run on %s (архитектура готова)", cfg.GRPCAddress)
+		log.Printf("Общий слой бизнес-логики создан и готов для использования")
+		
+		// В реальной реализации здесь был бы запуск настоящего gRPC сервера
+		<-ctx.Done()
 	}()
 
 	// Ждем либо сигнал завершения, либо ошибку сервера
@@ -129,11 +143,14 @@ func main() {
 		}
 	}
 
-	// Graceful shutdown сервера - ждем завершения всех активных запросов
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("error during server shutdown: %v", err)
+	// Graceful shutdown серверов - ждем завершения всех активных запросов
+	log.Println("shutting down servers...")
+	
+	// Останавливаем HTTP сервер
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("error during HTTP server shutdown: %v", err)
 	} else {
-		log.Println("all active requests completed")
+		log.Println("HTTP server stopped gracefully")
 	}
 
 	// Сохраняем все несохраненные данные

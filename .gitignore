@@ -25,3 +25,9 @@ vendor/
 # Build artifacts
 bin/
 certs/*.pem
+
+# Profile files
+profiles/*.pprof
+
+# Main binary
+shortener

@@ -12,8 +12,9 @@ import (
 
 // Router предоставляет методы для работы с handlers.
 type Router struct {
-	URLHandler *handlers.URLHandler
-	SecretKey  string
+	URLHandler    *handlers.URLHandler
+	SecretKey     string
+	TrustedSubnet string
 }
 
 // SetupRouter устанавливает маршруты для handlers.
@@ -42,6 +43,10 @@ func SetupRouter(rt Router) http.Handler {
 	api.POST("/shorten/batch", rt.URLHandler.Batch)
 	api.GET("/user/urls", rt.URLHandler.GetUserURLs)
 	api.DELETE("/user/urls", rt.URLHandler.BatchDeleteHandler)
+
+	internal := api.Group("/internal")
+	internal.Use(middlewares.TrustedSubnetMiddleware(rt.TrustedSubnet))
+	internal.GET("/stats", rt.URLHandler.GetStats)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusBadRequest, "invalid request")
